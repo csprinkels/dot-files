@@ -33,7 +33,7 @@ This repository stores all my dotfiles, config files, and a setup script to conf
 │   ├── bash/             # Bashrc, profile, aliases
 │   ├── git/              # .gitconfig, .gitignore
 │   └── vim/              # vimrc, plugin configs
-├── new-mac-setup.sh      # Automated Homebrew and app installer
+├── dev-setup.sh          # Automated Homebrew and app installer
 └── README.md             # This documentation
 ```
 
@@ -46,13 +46,13 @@ cd ~/.dotfiles
 ```
 2. Run the macOS setup script:
 ```bash
-bash new-mac-setup.sh
+bash dev-setup.sh
 ```
 
 ## Usage
 
 - To update your dotfiles locally, modify the files under `config-files/` and re-run your symlinking tool.
-- To apply changes to a remote machine, pull the latest repo and re-execute `new-mac-setup.sh`.
+- To apply changes to a remote machine, pull the latest repo and re-execute `dev-setup.sh`.
 
 ## Configuration Files
 
