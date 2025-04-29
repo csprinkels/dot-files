@@ -1,0 +1,67 @@
+{
+    "bracketPairColorizer.depreciation-notice": false,
+    "editor.suggestSelection": "first",
+    "vsintellicode.modify.editor.suggestSelection": "automaticallyOverrodeDefaultValue",
+    "editor.wordWrap": "on",
+    "files.exclude": {
+        "**/*.*.meta": true,
+        "**/*.fbx": true,
+        "**/*.FBX": true,
+        "**/*.mat": true,
+        "**/*.meta": true,
+        "**/*.prefab": true,
+        "**/*.unityproj": true,
+        "**/Library": true,
+        "**/Packages": true,
+        "**/ProjectSettings": true,
+        "**/Temp": true
+    },
+    "tabnine.experimentalAutoImports": true,
+    "kite.showWelcomeNotificationOnStartup": false,
+    "editor.minimap.enabled": false,
+    "bracket-pair-colorizer-2.depreciation-notice": false,
+    "editor.bracketPairColorization.enabled": true,
+    "editor.guides.bracketPairs": true,
+    "editor.guides.bracketPairsHorizontal": true,
+    "editor.stickyScroll.enabled": true,
+    "prettier.tabWidth": 4,
+    "[html]": {
+        "editor.defaultFormatter": "vscode.html-language-features"
+    },
+    "editor.formatOnPaste": true,
+    "javascript.updateImportsOnFileMove.enabled": "always",
+    "files.autoSave": "afterDelay",
+    "[python]": {
+        "editor.formatOnType": true
+    },
+    "glassit.alpha": 255,
+    "workbench.colorTheme": "One Dark Pro",
+    "indentRainbow.indentSetter": {
+    
+    },
+    "indentRainbow.colors": [
+
+        "rgba(255,255,181,0.25)", //blue
+        "rgba(151,193,169,0.25)", //green
+        "rgba(236,213,227,0.25)", //purple
+        "rgba(143,202,202,0.25)" //blue
+    ],
+    "indentRainbow.indicatorStyle": "light",
+    "indentRainbow.lightIndicatorStyleLineWidth": 2,
+    "git.openRepositoryInParentFolders": "never",
+    "extensions.ignoreRecommendations": true,
+    "liveServer.settings.donotShowInfoMsg": true,
+    "codesandbox.currentWorkspace": "fd43860c-407f-4add-b22d-1b1772e5e447",
+    "remote.SSH.remotePlatform": {
+        "sandbox.5d3x62.csb": "linux"
+    },
+    "cmake.configureOnOpen": true,
+    "github.copilot.editor.enableAutoCompletions": true,
+    "workbench.iconTheme": "glyph.minimal",
+    "workbench.colorCustomizations": {
+        "terminal.background": "#00000000"
+    },
+    "workbench.settings.applyToAllProfiles": [
+        "workbench.colorCustomizations"
+    ]
+}
