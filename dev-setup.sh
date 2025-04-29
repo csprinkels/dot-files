@@ -235,15 +235,16 @@ done
 # Install applications
 section "Installing Applications"
 apps=(
-    "appcleaner"           # App Cleaner
+    "appcleaner"           # App Uninstaller
     "arc"                  # Arc Browser
-    "bartender"            # Bartender 5
-    "cleanshot"            # CleanShot X
-    "keka"                 # Keka
-    "nordpass"             # NordPass
-    "notion"               # Notion
-    "raycast"              # Raycast
-    "spotify"              # Spotify
+    "bartender"            # Menu Bar Manager
+    "chrome"               # Chrome Browser
+    "cleanshot"            # ScreenShot App
+    "keka"                 # Zip File Manager
+    "nordpass"             # Password Manager
+    "notion"               # Note Taking
+    "raycast"              # Spotlight Replacement
+    "spotify"              # Music
 )
 
 echo "Installing applications..."
