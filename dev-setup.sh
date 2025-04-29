@@ -263,44 +263,52 @@ if ! command -v code &>/dev/null; then
 else
     info "Installing VS Code extensions..."
     extensions=(
-        # JavaScript/TypeScript
+        # Code Formatting & Linting
+        aaron-bond.better-comments        # Better Comments
         dbaeumer.vscode-eslint            # ESLint
         esbenp.prettier-vscode            # Prettier
-        VisualStudioExptTeam.vscodeintellicode # IntelliCode
-        ms-vscode.vscode-typescript-next  # TypeScript
-
-        # JavaScript Frameworks
-        dsznajder.es7-react-js-snippets   # React snippets
-        johnpapa.angular2                  # Angular
-        octref.vetur                       # Vue
-        bradlc.vscode-tailwindcss         # Tailwind CSS
-
-        # Node.js
-        eg2.vscode-npm-script             # npm support
+        
+        # IntelliSense & Productivity
+        VisualStudioExptTeam.vscodeintellicode            # IntelliCode
+        VisualStudioExptTeam.intellicode-api-usage-examples # IntelliCode API Examples
         christian-kohler.npm-intellisense # npm intellisense
         christian-kohler.path-intellisense # path intellisense
-
+        usernamehw.errorlens              # Error Lens
+        
+        # JavaScript/TypeScript
+        ms-vscode.vscode-typescript-next  # TypeScript
+        dsznajder.es7-react-js-snippets   # React snippets
+        bradlc.vscode-tailwindcss         # Tailwind CSS
+        
+        # HTML/CSS
+        anteprimorac.html-end-tag-labels  # HTML End Tag Labels
+        formulahendry.auto-close-tag      # Auto Close Tag
+        formulahendry.auto-rename-tag     # Auto Rename Tag
+        oderwat.indent-rainbow            # Indent Rainbow
+        ritwickdey.liveserver             # Live Server
+        solnurkarim.html-to-css-autocompletion # HTML to CSS Autocompletion
+        
         # Docker/DevOps
         ms-azuretools.vscode-docker       # Docker
-        ms-kubernetes-tools.vscode-kubernetes-tools # Kubernetes
-
+        redhat.vscode-yaml                # YAML
+        twxs.cmake                        # CMake
+        
         # Database
         cweijan.vscode-mysql-client2      # MySQL
-
+        cweijan.dbclient-jdbc             # DB Client JDBC
+        
         # Git
         eamodio.gitlens                   # GitLens
         github.vscode-pull-request-github # GitHub PRs
-
+        
         # Terminal/Shell
         wmaurer.change-case               # Change case
         mikestead.dotenv                  # .env files
-        gruntfuggly.todo-tree             # TODO tree
-        shardulm94.trailing-spaces        # Trailing spaces
         
-        # Themes & Productivity
-        aaron-bond.better-comments        # Better Comments
+        # Themes & UI
         zhuangtongfa.material-theme       # One Dark Pro Theme
         miguelsolorio.symbols             # Symbols Icon Theme
+        illixion.vscode-vibrancy-continued # Vibrancy
     )
     for ext in "${extensions[@]}"; do
         if code --install-extension "$ext" --force; then
@@ -329,17 +337,44 @@ if [ -f ~/Library/Application\ Support/Code/User/settings.json ]; then
 fi
 
 # Install Windsurf extensions (same as VS Code)
+section "Installing Windsurf Extensions"
 if command -v windsurf &>/dev/null; then
     info "Installing Windsurf extensions..."
-    for ext in "${extensions[@]}"; do
-        if windsurf --install-extension "$ext" --force; then
-            info "Installed $ext in Windsurf"
+    # Check if Windsurf supports the same CLI commands as VS Code
+    if windsurf --help 2>&1 | grep -q "\-\-install-extension"; then
+        # Windsurf uses same CLI format as VS Code
+        for ext in "${extensions[@]}"; do
+            if windsurf --install-extension "$ext" --force; then
+                info "Installed $ext in Windsurf"
+            else
+                warn "Failed to install $ext in Windsurf"
+            fi
+        done
+    else
+        # Alternative method: Copy VS Code extensions to Windsurf extensions directory
+        VSCODE_EXTS_DIR="$HOME/.vscode/extensions"
+        WINDSURF_EXTS_DIR="$HOME/Library/Application Support/Windsurf/extensions"
+        
+        if [ -d "$VSCODE_EXTS_DIR" ]; then
+            mkdir -p "$WINDSURF_EXTS_DIR"
+            info "Copying extensions from VS Code to Windsurf..."
+            
+            # Create a list of VS Code extensions to display
+            echo "VS Code extensions being synced to Windsurf:"
+            ls -1 "$VSCODE_EXTS_DIR" | while read ext; do
+                echo "  - $ext"
+            done
+            
+            # Copy the extensions
+            cp -R "$VSCODE_EXTS_DIR"/* "$WINDSURF_EXTS_DIR"/ 2>/dev/null
+            info "VS Code extensions copied to Windsurf. You may need to restart Windsurf."
         else
-            warn "Failed to install $ext in Windsurf"
+            warn "VS Code extensions directory not found."
         fi
-    done
+    fi
 else
     warn "Windsurf CLI not found, skipping extension installation."
+    info "Please install extensions manually after installing Windsurf."
 fi
 
 # Setup Node.js environment
