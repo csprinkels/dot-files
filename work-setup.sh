@@ -27,9 +27,8 @@ function section() {
 }
 
 # Welcome message
-echo "🖥️  Full Stack Web Development Environment Setup 🖥️"
-echo "==================================================="
-echo "This script will set up your Mac for full stack web development"
+echo "🖥️  Work Laptop Setup 🖥️"
+echo "========================"
 echo ""
 
 # Create necessary directories
@@ -287,14 +286,14 @@ section "Installing Applications"
 apps=(
     "appcleaner"           # App Uninstaller
     "arc"                  # Arc Browser
-    "bartender"            # Menu Bar Manager
+    "hiddenbar"            # Menu Bar Manager (replaces bartender)
     "alt-tab"              # Windows-like alt-tab
     "synergy"              # Network KVM
     "resilio-sync"         # File synchronization
-    "google-chrome"        # Chrome Browser
-    "cleanshot"            # ScreenShot App
+    "lanscan"              # Network scanner
+    "anydesk"              # Remote desktop
+    "google-chrome"         # Chrome Browser
     "keka"                 # Zip File Manager
-    "nordpass"             # Password Manager
     "raycast"              # Spotlight Replacement
     "spotify"              # Music
 )

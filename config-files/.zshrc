@@ -18,16 +18,7 @@ HISTFILE=~/.zsh_history
 # Set up Nerd Fonts or other custom fonts (you must have Nerd Fonts installed)
 # If using iTerm, make sure the font is set correctly in preferences (Hack Nerd Font, Fira Code, etc.)
 
-# Configure Oh My Posh
-if command -v oh-my-posh &> /dev/null; then
-    # Set the path to your desired theme
-    export POSH_THEME="$HOME/.config/ohmyposh/zen.toml"  # Replace with your theme file path
-    eval "$(oh-my-posh init zsh)"  # Initialize Oh My Posh for Zsh
-fi
 
-# Customize the terminal prompt (if needed)
-# Example of a simple custom prompt
-PROMPT='%n@%m %~ %# '  # Default Zsh prompt
 
 # Optional: Add custom aliases here
 alias ll='ls -lA'
@@ -62,3 +53,36 @@ export PATH="/Users/sprinkel/.codeium/windsurf/bin:$PATH"
 
 # Added by Windsurf
 export PATH="/Users/sprinkel/.codeium/windsurf/bin:$PATH"
+
+# Custom aliases
+alias ll="ls -la"
+alias cat="bat"
+alias find="fd"
+alias grep="rg"
+alias top="htop"
+
+# Git aliases
+alias gs="git status"
+alias ga="git add"
+alias gc="git commit"
+alias gp="git push"
+alias gl="git pull"
+alias gd="git diff"
+alias gco="git checkout"
+alias gb="git branch"
+
+# NVM setup
+export NVM_DIR="/Users/christiansprinkel/.nvm"
+[ -s "/Users/christiansprinkel/.nvm/nvm.sh" ] && \. "/Users/christiansprinkel/.nvm/nvm.sh"
+[ -s "/Users/christiansprinkel/.nvm/bash_completion" ] && \. "/Users/christiansprinkel/.nvm/bash_completion"
+
+# Docker aliases
+alias dc="docker-compose"
+alias dps="docker ps"
+alias dex="docker exec -it"
+
+# Oh My Posh setup
+if command -v oh-my-posh &> /dev/null; then
+    eval "$(oh-my-posh init zsh --config ~/.config/ohmyposh/catppuccin_frappe.omp.json)"
+fi
+export PATH="$HOME/.local/bin:$PATH"
