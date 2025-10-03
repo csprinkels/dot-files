@@ -83,6 +83,6 @@ alias dex="docker exec -it"
 
 # Oh My Posh setup
 if command -v oh-my-posh &> /dev/null; then
-    eval "$(oh-my-posh init zsh --config ~/.config/ohmyposh/catppuccin_frappe.omp.json)"
+    eval "$(oh-my-posh init zsh --config ~/.config/ohmyposh/sprinks.omp.json)"
 fi
 export PATH="$HOME/.local/bin:$PATH"

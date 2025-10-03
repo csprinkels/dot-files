@@ -363,7 +363,6 @@ else
         # Themes & UI
         zhuangtongfa.material-theme       # One Dark Pro Theme
         miguelsolorio.symbols             # Symbols Icon Theme
-        illixion.vscode-vibrancy-continued # Vibrancy
     )
     for ext in "${extensions[@]}"; do
         if code --install-extension "$ext" --force; then
