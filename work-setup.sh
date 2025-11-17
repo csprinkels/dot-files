@@ -154,10 +154,8 @@ fi
 # Install development tools
 section "Installing Development Tools"
 dev_tools=(
-    "visual-studio-code"   # VS Code
     "docker"               # Containerization
     "github"               # GitHub Desktop
-    "iterm2"               # iTerm2 Terminal
     "cursor"               # Cursor IDE
 )
 
@@ -246,6 +244,8 @@ shell_tools=(
     "oh-my-posh"           # Prompt theme engine
     "gitui"                # Git terminal UI
     "lazygit"              # Git terminal UI (alternative)
+    "tree-sitter"          # Tree-sitter CLI for LazyVim
+    "neovim"               # Neovim text editor
 )
 
 echo "Installing shell tools..."
@@ -400,6 +400,48 @@ else
     info "Cursor CLI already installed."
 fi
 
+# Install and setup LazyVim
+section "Installing LazyVim"
+if command -v nvim &> /dev/null; then
+    # Check if LazyVim is already installed
+    if [ -d "$HOME/.config/nvim" ] && [ -f "$HOME/.config/nvim/lua/lazyvim/config/keymaps.lua" ]; then
+        info "LazyVim is already installed."
+    else
+        info "Installing LazyVim..."
+        
+        # Make backup of existing Neovim config if it exists
+        if [ -d "$HOME/.config/nvim" ]; then
+            warn "Existing Neovim config found. Creating backup..."
+            mv "$HOME/.config/nvim" "$HOME/.config/nvim.bak"
+            info "Backup created at ~/.config/nvim.bak"
+        fi
+        
+        # Create backup of other Neovim directories
+        if [ -d "$HOME/.local/share/nvim" ]; then
+            mv "$HOME/.local/share/nvim" "$HOME/.local/share/nvim.bak"
+        fi
+        if [ -d "$HOME/.local/state/nvim" ]; then
+            mv "$HOME/.local/state/nvim" "$HOME/.local/state/nvim.bak"
+        fi
+        if [ -d "$HOME/.cache/nvim" ]; then
+            mv "$HOME/.cache/nvim" "$HOME/.cache/nvim.bak"
+        fi
+        
+        # Clone LazyVim starter
+        echo "Cloning LazyVim starter..."
+        if git clone https://github.com/LazyVim/starter "$HOME/.config/nvim"; then
+            # Remove .git folder so it can be added to user's repo later
+            rm -rf "$HOME/.config/nvim/.git"
+            info "LazyVim installed successfully!"
+            info "You can now run 'nvim' to start LazyVim"
+        else
+            error "Failed to install LazyVim. Please install manually."
+        fi
+    fi
+else
+    warn "Neovim not found. Please install Neovim first before setting up LazyVim."
+fi
+
 # Install Cursor extensions (same as VS Code)
 section "Installing Cursor Extensions"
 if command -v cursor &>/dev/null; then
@@ -541,6 +583,8 @@ echo "🎉 Your Full Stack Web Development environment has been set up! 🎉"
 echo ""
 echo "Your dotfiles have been copied to ~/dotfiles for backup"
 echo "Your Oh My Posh theme has been set up at ~/.config/ohmyposh/sprinks.omp.json"
+echo "LazyVim has been installed and configured for Neovim"
 echo ""
 echo "You may need to restart your terminal or run 'source ~/.zshrc' to apply all changes."
+echo "Run 'nvim' to start LazyVim and 'cursor' to start Cursor IDE"
 echo "Happy coding! 💻"
