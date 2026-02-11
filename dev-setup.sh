@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -88,26 +89,30 @@ else
 # WorkFlow external-drive config for dev-setup.sh
 # You can edit these and re-run the script.
 
-CODE_DIR_NAME=Code
+CODE_DIR_NAME=Developer
 MOVE_DOWNLOADS=0
 INSTALL_SYNCTHING=0
 WORKFLOW_ENV_EOF
     fi
 fi
 
-CODE_DIR_NAME="${CODE_DIR_NAME:-Code}"
+CODE_DIR_NAME="${CODE_DIR_NAME:-Developer}"
 MOVE_DOWNLOADS="${MOVE_DOWNLOADS:-0}"
 INSTALL_SYNCTHING="${INSTALL_SYNCTHING:-0}"
-EXTERNAL_CODE="$EXTERNAL_ROOT/$CODE_DIR_NAME"
+EXTERNAL_DEVELOPER="$EXTERNAL_ROOT/$CODE_DIR_NAME"
 EXTERNAL_DOWNLOADS="$EXTERNAL_ROOT/Downloads"
 EXTERNAL_DEVCACHE="$EXTERNAL_ROOT/DevCache"
 EXTERNAL_APPS="$EXTERNAL_ROOT/Apps"
 
-# Create directory layout on external drive
+# Create directory layout on external drive (full WorkFlow structure)
 section "External drive: $EXTERNAL_VOL_NAME"
 if [ "$DRY_RUN" != "1" ]; then
-    mkdir -p "$EXTERNAL_CODE"
+    mkdir -p "$EXTERNAL_ROOT/Assets"
+    mkdir -p "$EXTERNAL_ROOT/Creative"
+    mkdir -p "$EXTERNAL_DEVELOPER"
+    mkdir -p "$EXTERNAL_ROOT/Documents"
     mkdir -p "$EXTERNAL_DOWNLOADS"
+    mkdir -p "$EXTERNAL_ROOT/Hardware"
     mkdir -p "$EXTERNAL_DEVCACHE"/{npm,pnpm,yarn,python,cargo,go/mod,go/cache,gradle,swiftpm,xdg}
     mkdir -p "$EXTERNAL_APPS"
 fi
@@ -115,10 +120,14 @@ echo "Internal (macOS + Homebrew + Docker):"
 echo "  Homebrew: /opt/homebrew (unchanged)"
 echo "  Docker:   internal disk images (unchanged)"
 echo "External ($EXTERNAL_ROOT):"
-echo "  Code:     $EXTERNAL_CODE"
-echo "  Downloads: $EXTERNAL_DOWNLOADS"
-echo "  DevCache: $EXTERNAL_DEVCACHE"
-echo "  Apps:     $EXTERNAL_APPS (optional: manually place large apps here)"
+echo "  Developer"
+echo "  Assets"
+echo "  Creative"
+echo "  Documents"
+echo "  Downloads"
+echo "  Hardware"
+echo "  DevCache"
+echo "  Apps"
 info "External directory layout ready."
 
 # Safe merge: rsync src to dest (faithful mirror), then rename src to timestamp backup
@@ -139,33 +148,27 @@ safe_merge_move() {
     fi
 }
 
-# Ensure ~/Code is a symlink to external Code
-section "Code folder (external-first)"
-if [ -d "$HOME/Projects" ] && [ ! -d "$HOME/Code" ]; then
-    log_action "Migrating ~/Projects → $EXTERNAL_CODE"
-    safe_merge_move "$HOME/Projects" "$EXTERNAL_CODE" "Projects"
-    if [ "$DRY_RUN" != "1" ] && [ ! -L "$HOME/Code" ]; then
-        ln -sfn "$EXTERNAL_CODE" "$HOME/Code"
-        info "Created ~/Code → $EXTERNAL_CODE"
-    fi
-elif [ -d "$HOME/Code" ] || [ -L "$HOME/Code" ]; then
-    if [ -L "$HOME/Code" ] && [ "$(readlink "$HOME/Code")" = "$EXTERNAL_CODE" ]; then
-        info "~/Code already points to $EXTERNAL_CODE"
-    elif [ -d "$HOME/Code" ] && [ ! -L "$HOME/Code" ]; then
-        log_action "Moving ~/Code contents to $EXTERNAL_CODE"
-        safe_merge_move "$HOME/Code" "$EXTERNAL_CODE" "Code"
-        if [ "$DRY_RUN" != "1" ] && [ ! -L "$HOME/Code" ]; then
-            ln -sfn "$EXTERNAL_CODE" "$HOME/Code"
-            info "Replaced ~/Code with symlink to $EXTERNAL_CODE"
-        fi
-    fi
+# Ensure ~/Developer is a symlink to external Developer (migrate ~/Projects, ~/Code, or real ~/Developer first)
+section "Developer folder (external-first)"
+if [ -d "$HOME/Projects" ] && [ ! -L "$HOME/Projects" ]; then
+    log_action "Migrating ~/Projects → $EXTERNAL_DEVELOPER"
+    safe_merge_move "$HOME/Projects" "$EXTERNAL_DEVELOPER" "Projects"
+fi
+if [ -d "$HOME/Code" ] && [ ! -L "$HOME/Code" ]; then
+    log_action "Migrating ~/Code → $EXTERNAL_DEVELOPER"
+    safe_merge_move "$HOME/Code" "$EXTERNAL_DEVELOPER" "Code"
+fi
+if [ -d "$HOME/Developer" ] && [ ! -L "$HOME/Developer" ]; then
+    log_action "Moving ~/Developer contents to $EXTERNAL_DEVELOPER"
+    safe_merge_move "$HOME/Developer" "$EXTERNAL_DEVELOPER" "Developer"
+fi
+if [ -L "$HOME/Developer" ] && [ "$(readlink "$HOME/Developer")" = "$EXTERNAL_DEVELOPER" ]; then
+    info "~/Developer already points to $EXTERNAL_DEVELOPER"
+elif [ "$DRY_RUN" != "1" ]; then
+    ln -sfn "$EXTERNAL_DEVELOPER" "$HOME/Developer"
+    info "Created ~/Developer → $EXTERNAL_DEVELOPER"
 else
-    if [ "$DRY_RUN" != "1" ]; then
-        ln -sfn "$EXTERNAL_CODE" "$HOME/Code"
-        info "Created ~/Code → $EXTERNAL_CODE"
-    else
-        log_action "Would create ~/Code → $EXTERNAL_CODE"
-    fi
+    log_action "Would create ~/Developer → $EXTERNAL_DEVELOPER"
 fi
 
 # Optional: move Downloads to external
@@ -189,25 +192,27 @@ else
     info "Downloads left on internal (set MOVE_DOWNLOADS=1 in workflow.env to move)"
 fi
 
-# Syncthing ignore template (do not sync junk)
-STIGNORE_TEMPLATE="$EXTERNAL_CODE/.stignore.template"
-if [ ! -f "$STIGNORE_TEMPLATE" ]; then
+# Syncthing: .stignore at drive root (sync entire WorkFlow to NAS; exclude DevCache and build junk)
+STIGNORE_FILE="$EXTERNAL_ROOT/.stignore"
+if [ ! -f "$STIGNORE_FILE" ]; then
     if [ "$DRY_RUN" != "1" ]; then
-        cat > "$STIGNORE_TEMPLATE" << 'STIGNORE_EOF'
-# Syncthing ignore template – copy to .stignore and edit as needed
-node_modules/
-.next/
-dist/
-build/
-.cache/
-DerivedData/
+        cat > "$STIGNORE_FILE" << 'STIGNORE_EOF'
+DevCache/**
+**/node_modules/**
+**/.next/**
+**/dist/**
+**/build/**
+**/.cache/**
+**/DerivedData/**
 .DS_Store
 *.log
 STIGNORE_EOF
-        log_action "Created $STIGNORE_TEMPLATE"
+        log_action "Created $STIGNORE_FILE"
     else
-        log_action "Would create $STIGNORE_TEMPLATE"
+        log_action "Would create $STIGNORE_FILE"
     fi
+else
+    info ".stignore already exists at drive root"
 fi
 
 # Create necessary directories (internal)
@@ -476,6 +481,9 @@ for db in "${databases[@]}"; do
 done
 
 # Install applications (Syncthing is optional via INSTALL_SYNCTHING=1)
+# These apps MUST stay on the internal macOS drive.
+# Do not relocate to WorkFlow/Apps.
+# They integrate deeply with macOS (menu bar, login items, permissions, etc.)
 section "Installing Applications"
 apps=(
     "appcleaner"           # App Uninstaller
@@ -506,6 +514,8 @@ for app in "${apps[@]}"; do
         warn "Failed to install $app."
     fi
 done
+info "System-integrated apps were installed to /Applications (internal drive)."
+info "Large creative apps can optionally be installed manually to /Volumes/WorkFlow/Apps."
 
 # Optional: Syncthing (open-source sync; replace Resilio-style workflow)
 if [ "$INSTALL_SYNCTHING" = "1" ]; then
@@ -532,7 +542,8 @@ if [ "$INSTALL_SYNCTHING" = "1" ]; then
     info "Syncthing next steps:"
     echo "  1. Start Syncthing once: brew services start syncthing (or open Syncthing from Applications)"
     echo "  2. Open web UI: http://127.0.0.1:8384"
-    echo "  3. Add folder: $EXTERNAL_CODE → point to NAS or other device"
+    echo "  3. Add folder: $EXTERNAL_ROOT"
+    echo "  4. Mirror destination: WorkFlowMir"
     echo ""
 fi
 
@@ -828,7 +839,7 @@ fi
 section "Setup Complete!"
 echo "🎉 Your Full Stack Web Development environment has been set up! 🎉"
 echo ""
-echo "Internal: Homebrew + Docker unchanged. Code, caches, and (optionally) Downloads live on $EXTERNAL_ROOT"
+echo "Internal: Homebrew + Docker unchanged. Developer, caches, and (optionally) Downloads live on $EXTERNAL_ROOT"
 echo "Config:   $WORKFLOW_ENV (edit and re-run to change CODE_DIR_NAME, MOVE_DOWNLOADS, INSTALL_SYNCTHING)"
 echo "Dotfiles: copied to ~/dotfiles for backup"
 echo "Oh My Posh: ~/.config/ohmyposh/sprinks.omp.json"
