@@ -1,25 +1,91 @@
 # dot-files
 
+> Personal shell configuration and macOS bootstrap scripts — external-first workflow on a Thunderbolt NVMe drive named **WorkFlow**.
 
-> Repository containing my personal shell configuration and macOS automation scripts to streamline the setup of a new machine.
+## Quick start
 
+1. Plug in your external drive (default name: `WorkFlow`).
+2. Clone this repo:
 
-## Installation
-
-1. Clone this repository:
 ```bash
 git clone https://github.com/sprinkels/dot-files.git ~/.dotfiles
 cd ~/.dotfiles
 ```
-2. Run the macOS setup script:
+
+3. Run the setup:
+
 ```bash
 bash dev-setup.sh
 ```
 
-## Usage
+### Preview first (dry run)
 
-- To update your dotfiles locally, modify the files under `config-files/` and re-run your symlinking tool.
-- To apply changes to a remote machine, pull the latest repo and re-execute `dev-setup.sh`.
+```bash
+DRY_RUN=1 bash dev-setup.sh
+```
+
+Nothing is installed or moved — the script prints every action it *would* take.
+
+## What lives where
+
+| Location | Contents |
+|---|---|
+| **Internal SSD** | macOS, Homebrew (`/opt/homebrew`), Docker disk images |
+| **External (`/Volumes/WorkFlow`)** | `Code/`, `Downloads/` (optional), `DevCache/`, `Apps/` (manual) |
+
+The script creates `~/Code` as a symlink to the external drive and redirects npm, pnpm, yarn, pip, Cargo, Go, and XDG caches to `DevCache/`.
+
+## Configuration
+
+The script reads **`/Volumes/WorkFlow/workflow.env`** (created automatically on first run). Edit it to change behavior without touching the script:
+
+```bash
+CODE_DIR_NAME=Code        # name of the code folder on the external drive
+MOVE_DOWNLOADS=0          # set to 1 to symlink ~/Downloads to external
+INSTALL_SYNCTHING=0       # set to 1 to install Syncthing + GUI
+```
+
+Environment variables also work: `EXTERNAL_VOL_NAME=OtherDrive bash dev-setup.sh`
+
+### Other flags (set as env vars)
+
+| Variable | Default | Effect |
+|---|---|---|
+| `DRY_RUN` | `0` | Preview only, no changes |
+| `INSTALL_WARP` | `0` | Install Warp AI terminal |
+| `SET_MACOS_DEFAULTS` | `0` | Set default browser (Dia) + Dock prefs |
+
+## What the script installs
+
+- **Homebrew** + update/upgrade
+- **Xcode CLI Tools**
+- **Git** (configures if no `.gitconfig`)
+- **Dev tools**: Cursor, Docker, GitHub Desktop
+- **Package managers**: yarn, pnpm
+- **NVM** (latest) + Node LTS + global npm packages
+- **Nerd Fonts**: Meslo, JetBrains Mono, Fira Code
+- **Shell tools**: fzf, ripgrep, fd, bat, jq, htop, gh, oh-my-posh, gitui, lazygit
+- **Databases**: MySQL, PostgreSQL 15
+- **Apps**: Raycast, Chrome, Spotify, CleanShot, Keka, AltTab, Bartender, etc.
+- **Oh My Zsh** + custom `.zshrc` with aliases, NVM, Oh My Posh prompt
+- **Syncthing** (optional) with `.stignore.template` for the Code folder
+
+## Config files
+
+| File | Destination |
+|---|---|
+| `config-files/.zshrc` | `~/.zshrc` (deployed after Oh My Zsh) |
+| `config-files/.gitconfig` | `~/.gitconfig` |
+| `config-files/sprinks.omp.json` | `~/.config/ohmyposh/sprinks.omp.json` |
+| `config-files/cursor profile.code-profile` | Cursor settings, keybindings, extensions |
+
+Existing files are backed up with a timestamp (e.g. `.zshrc.backup.20260211-143000`) before overwriting.
+
+## Other scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/uninstall-nix.sh` | Fully remove Nix package manager from macOS |
 
 ## Author
 
@@ -27,4 +93,4 @@ Maintained by [sprinkels](https://github.com/sprinkels).
 
 ## License
 
-This repository is licensed under the [MIT License](LICENSE).
+[MIT License](LICENSE)
