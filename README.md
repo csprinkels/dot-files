@@ -89,7 +89,7 @@ Existing files are backed up with a timestamp (e.g. `.zshrc.backup.20260211-1430
 
 ## Author
 
-Maintained by [sprinkels](https://github.com/sprinkels).
+Maintained by [sprinkels](https://github.com/csprinkels).
 
 ## License
 
