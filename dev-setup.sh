@@ -62,7 +62,7 @@ fi
 
 # Load workflow.env from external drive (safe: whitelist keys only, trim/strip quotes)
 WORKFLOW_ENV="$EXTERNAL_ROOT/workflow.env"
-WORKFLOW_ALLOWED_KEYS="CODE_DIR_NAME MOVE_DOWNLOADS INSTALL_SYNCTHING EXTERNAL_VOL_NAME"
+WORKFLOW_ALLOWED_KEYS="CODE_DIR_NAME MOVE_DOWNLOADS EXTERNAL_VOL_NAME"
 if [ -f "$WORKFLOW_ENV" ]; then
     info "Loading config from $WORKFLOW_ENV"
     while IFS= read -r line; do
@@ -91,14 +91,12 @@ else
 
 CODE_DIR_NAME=Developer
 MOVE_DOWNLOADS=0
-INSTALL_SYNCTHING=0
 WORKFLOW_ENV_EOF
     fi
 fi
 
 CODE_DIR_NAME="${CODE_DIR_NAME:-Developer}"
 MOVE_DOWNLOADS="${MOVE_DOWNLOADS:-0}"
-INSTALL_SYNCTHING="${INSTALL_SYNCTHING:-0}"
 EXTERNAL_DEVELOPER="$EXTERNAL_ROOT/$CODE_DIR_NAME"
 EXTERNAL_DOWNLOADS="$EXTERNAL_ROOT/Downloads"
 EXTERNAL_DEVCACHE="$EXTERNAL_ROOT/DevCache"
@@ -190,29 +188,6 @@ if [ "$MOVE_DOWNLOADS" = "1" ]; then
     fi
 else
     info "Downloads left on internal (set MOVE_DOWNLOADS=1 in workflow.env to move)"
-fi
-
-# Syncthing: .stignore at drive root (sync entire WorkFlow to NAS; exclude DevCache and build junk)
-STIGNORE_FILE="$EXTERNAL_ROOT/.stignore"
-if [ ! -f "$STIGNORE_FILE" ]; then
-    if [ "$DRY_RUN" != "1" ]; then
-        cat > "$STIGNORE_FILE" << 'STIGNORE_EOF'
-DevCache/**
-**/node_modules/**
-**/.next/**
-**/dist/**
-**/build/**
-**/.cache/**
-**/DerivedData/**
-.DS_Store
-*.log
-STIGNORE_EOF
-        log_action "Created $STIGNORE_FILE"
-    else
-        log_action "Would create $STIGNORE_FILE"
-    fi
-else
-    info ".stignore already exists at drive root"
 fi
 
 # Create necessary directories (internal)
@@ -480,7 +455,7 @@ for db in "${databases[@]}"; do
     fi
 done
 
-# Install applications (Syncthing is optional via INSTALL_SYNCTHING=1)
+# Install applications
 # These apps MUST stay on the internal macOS drive.
 # Do not relocate to WorkFlow/Apps.
 # They integrate deeply with macOS (menu bar, login items, permissions, etc.)
@@ -516,36 +491,6 @@ for app in "${apps[@]}"; do
 done
 info "System-integrated apps were installed to /Applications (internal drive)."
 info "Large creative apps can optionally be installed manually to /Volumes/WorkFlow/Apps."
-
-# Optional: Syncthing (open-source sync; replace Resilio-style workflow)
-if [ "$INSTALL_SYNCTHING" = "1" ]; then
-    section "Installing Syncthing"
-    if brew list syncthing &>/dev/null; then
-        info "Syncthing is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would run: brew install syncthing"
-    elif brew install syncthing; then
-        info "Syncthing installed."
-    else
-        warn "Failed to install Syncthing formula."
-    fi
-    if [ "$DRY_RUN" != "1" ]; then
-        if brew list --cask syncthing-app &>/dev/null; then
-            info "Syncthing GUI (syncthing-app) already installed."
-        elif brew install --cask syncthing-app 2>/dev/null; then
-            info "Syncthing GUI (syncthing-app) installed."
-        else
-            warn "Syncthing GUI cask not found. Start from CLI: brew services start syncthing. Web UI: http://127.0.0.1:8384"
-        fi
-    fi
-    echo ""
-    info "Syncthing next steps:"
-    echo "  1. Start Syncthing once: brew services start syncthing (or open Syncthing from Applications)"
-    echo "  2. Open web UI: http://127.0.0.1:8384"
-    echo "  3. Add folder: $EXTERNAL_ROOT"
-    echo "  4. Mirror destination: WorkFlowMir"
-    echo ""
-fi
 
 # Deskin (remote desktop) has no Homebrew cask. Install manually from App Store or https://deskin.io
 info "Deskin: install from App Store or deskin.io if needed (no Homebrew cask)."
@@ -840,12 +785,12 @@ section "Setup Complete!"
 echo "🎉 Your Full Stack Web Development environment has been set up! 🎉"
 echo ""
 echo "Internal: Homebrew + Docker unchanged. Developer, caches, and (optionally) Downloads live on $EXTERNAL_ROOT"
-echo "Config:   $WORKFLOW_ENV (edit and re-run to change CODE_DIR_NAME, MOVE_DOWNLOADS, INSTALL_SYNCTHING)"
+echo "Config:   $WORKFLOW_ENV (edit and re-run to change CODE_DIR_NAME, MOVE_DOWNLOADS)"
 echo "Dotfiles: copied to ~/dotfiles for backup"
 echo "Oh My Posh: ~/.config/ohmyposh/sprinks.omp.json"
 echo "Cursor: profile from config-files/cursor profile.code-profile (or Preferences → Profiles → Import)"
 echo ""
-echo "Optional: INSTALL_WARP=1 (Warp terminal); SET_MACOS_DEFAULTS=1 (default browser/dock); set in workflow.env: MOVE_DOWNLOADS=1, INSTALL_SYNCTHING=1"
+echo "Optional: INSTALL_WARP=1 (Warp terminal); SET_MACOS_DEFAULTS=1 (default browser/dock); set in workflow.env: MOVE_DOWNLOADS=1"
 echo "DRY_RUN=1 to preview changes without applying."
 echo ""
 echo "Run 'source ~/.zshrc' (or restart terminal) to apply cache paths and aliases."

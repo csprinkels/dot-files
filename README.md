@@ -42,7 +42,6 @@ The script reads **`/Volumes/WorkFlow/workflow.env`** (created automatically on 
 ```bash
 CODE_DIR_NAME=Code        # name of the code folder on the external drive
 MOVE_DOWNLOADS=0          # set to 1 to symlink ~/Downloads to external
-INSTALL_SYNCTHING=0       # set to 1 to install Syncthing + GUI
 ```
 
 Environment variables also work: `EXTERNAL_VOL_NAME=OtherDrive bash dev-setup.sh`
@@ -68,7 +67,6 @@ Environment variables also work: `EXTERNAL_VOL_NAME=OtherDrive bash dev-setup.sh
 - **Databases**: MySQL, PostgreSQL 15
 - **Apps**: Raycast, Chrome, Spotify, CleanShot, Keka, AltTab, Bartender, etc.
 - **Oh My Zsh** + custom `.zshrc` with aliases, NVM, Oh My Posh prompt
-- **Syncthing** (optional) with `.stignore.template` for the Code folder
 
 ## Config files
 
