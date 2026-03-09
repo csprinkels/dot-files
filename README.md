@@ -30,18 +30,17 @@ Nothing is installed or moved — the script prints every action it *would* take
 
 | Location | Contents |
 |---|---|
-| **Internal SSD** | macOS, Homebrew (`/opt/homebrew`), Docker disk images |
-| **External (`/Volumes/WorkFlow`)** | `Code/`, `Downloads/` (optional), `DevCache/`, `Apps/` (manual) |
+| **Internal SSD** | macOS, Homebrew (`/opt/homebrew`), Docker disk images, all apps |
+| **External (`/Volumes/WorkFlow`)** | `Developer/`, `Assets/`, `Creative/`, `Documents/`, `Downloads/` (backup), `Hardware/`, `DevCache/` |
 
-The script creates `~/Code` as a symlink to the external drive and redirects npm, pnpm, yarn, pip, Cargo, Go, and XDG caches to `DevCache/`.
+The script creates `~/Developer` as a symlink to the external drive and redirects npm, pnpm, yarn, pip, Cargo, Go, and XDG caches to `DevCache/`.
 
 ## Configuration
 
 The script reads **`/Volumes/WorkFlow/workflow.env`** (created automatically on first run). Edit it to change behavior without touching the script:
 
 ```bash
-CODE_DIR_NAME=Code        # name of the code folder on the external drive
-MOVE_DOWNLOADS=0          # set to 1 to symlink ~/Downloads to external
+CODE_DIR_NAME=Developer   # name of the code folder on the external drive
 ```
 
 Environment variables also work: `EXTERNAL_VOL_NAME=OtherDrive bash dev-setup.sh`
@@ -51,7 +50,6 @@ Environment variables also work: `EXTERNAL_VOL_NAME=OtherDrive bash dev-setup.sh
 | Variable | Default | Effect |
 |---|---|---|
 | `DRY_RUN` | `0` | Preview only, no changes |
-| `INSTALL_WARP` | `0` | Install Warp AI terminal |
 | `SET_MACOS_DEFAULTS` | `0` | Set default browser (Dia) + Dock prefs |
 
 ## What the script installs
@@ -59,14 +57,35 @@ Environment variables also work: `EXTERNAL_VOL_NAME=OtherDrive bash dev-setup.sh
 - **Homebrew** + update/upgrade
 - **Xcode CLI Tools**
 - **Git** (configures if no `.gitconfig`)
-- **Dev tools**: Cursor, Docker, GitHub Desktop
+- **Dev tools**: VS Code, Docker, GitHub Desktop, Warp
 - **Package managers**: yarn, pnpm
 - **NVM** (latest) + Node LTS + global npm packages
 - **Nerd Fonts**: Meslo, JetBrains Mono, Fira Code
 - **Shell tools**: fzf, ripgrep, fd, bat, jq, htop, gh, oh-my-posh, gitui, lazygit
 - **Databases**: MySQL, PostgreSQL 15
-- **Apps**: Raycast, Chrome, Spotify, CleanShot, Keka, AltTab, Bartender, etc.
 - **Oh My Zsh** + custom `.zshrc` with aliases, NVM, Oh My Posh prompt
+- **Downloads sync**: weekly Friday backup of `~/Downloads` to external with auto file-type sorting
+
+## VS Code setup
+
+The script installs a custom **One Dark Catppuccin** theme (One Dark Pro UI + Catppuccin Frappe syntax + blue `#8caaee` accent), the Symbols icon theme, and these extensions:
+
+| Extension | Purpose |
+|---|---|
+| `anthropic.claude-code` | Claude Code |
+| `miguelsolorio.symbols` | Symbols icon theme |
+| `esbenp.prettier-vscode` | Prettier formatter |
+| `dbaeumer.vscode-eslint` | ESLint |
+| `eamodio.gitlens` | Git history/blame |
+| `usernamehw.errorlens` | Inline errors/warnings |
+| `christian-kohler.path-intellisense` | Path autocomplete |
+| `bradlc.vscode-tailwindcss` | Tailwind CSS IntelliSense |
+| `ms-azuretools.vscode-docker` | Docker |
+| `swiftlang.swift-vscode` | Swift |
+| `angular.ng-template` | Angular template IntelliSense |
+| `formulahendry.auto-rename-tag` | Auto-rename HTML/JSX tags |
+| `meganrogge.template-string-converter` | Auto template literal conversion |
+| `streetsidesoftware.code-spell-checker` | Spell checker |
 
 ## Config files
 
@@ -75,7 +94,9 @@ Environment variables also work: `EXTERNAL_VOL_NAME=OtherDrive bash dev-setup.sh
 | `config-files/.zshrc` | `~/.zshrc` (deployed after Oh My Zsh) |
 | `config-files/.gitconfig` | `~/.gitconfig` |
 | `config-files/sprinks.omp.json` | `~/.config/ohmyposh/sprinks.omp.json` |
-| `config-files/cursor profile.code-profile` | Cursor settings, keybindings, extensions |
+| `config-files/vscode/settings.json` | VS Code user settings |
+| `config-files/vscode/extensions.json` | VS Code extension list |
+| `config-files/vscode/themes/onedark-catppuccin/` | Custom VS Code color theme |
 
 Existing files are backed up with a timestamp (e.g. `.zshrc.backup.20260211-143000`) before overwriting.
 
@@ -83,6 +104,8 @@ Existing files are backed up with a timestamp (e.g. `.zshrc.backup.20260211-1430
 
 | Script | Purpose |
 |---|---|
+| `scripts/downloads-sync.sh` | Rsync `~/Downloads` to external + sort by file type (Images, Documents, Videos, Audio, Archives, Code, 3D_Printing, Game_Assets, Game_ROMs, Hardware, Installers) |
+| `scripts/com.sprinkels.downloads-sync.plist` | launchd plist — runs downloads sync every Friday at noon |
 | `scripts/uninstall-nix.sh` | Fully remove Nix package manager from macOS |
 
 ## Author

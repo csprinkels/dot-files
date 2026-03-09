@@ -62,7 +62,7 @@ fi
 
 # Load workflow.env from external drive (safe: whitelist keys only, trim/strip quotes)
 WORKFLOW_ENV="$EXTERNAL_ROOT/workflow.env"
-WORKFLOW_ALLOWED_KEYS="CODE_DIR_NAME MOVE_DOWNLOADS EXTERNAL_VOL_NAME"
+WORKFLOW_ALLOWED_KEYS="CODE_DIR_NAME EXTERNAL_VOL_NAME"
 if [ -f "$WORKFLOW_ENV" ]; then
     info "Loading config from $WORKFLOW_ENV"
     while IFS= read -r line; do
@@ -90,18 +90,14 @@ else
 # You can edit these and re-run the script.
 
 CODE_DIR_NAME=Developer
-MOVE_DOWNLOADS=0
 WORKFLOW_ENV_EOF
     fi
 fi
 
 CODE_DIR_NAME="${CODE_DIR_NAME:-Developer}"
-MOVE_DOWNLOADS="${MOVE_DOWNLOADS:-0}"
 EXTERNAL_DEVELOPER="$EXTERNAL_ROOT/$CODE_DIR_NAME"
 EXTERNAL_DOWNLOADS="$EXTERNAL_ROOT/Downloads"
 EXTERNAL_DEVCACHE="$EXTERNAL_ROOT/DevCache"
-EXTERNAL_APPS="$EXTERNAL_ROOT/Apps"
-
 # Create directory layout on external drive (full WorkFlow structure)
 section "External drive: $EXTERNAL_VOL_NAME"
 if [ "$DRY_RUN" != "1" ]; then
@@ -112,7 +108,6 @@ if [ "$DRY_RUN" != "1" ]; then
     mkdir -p "$EXTERNAL_DOWNLOADS"
     mkdir -p "$EXTERNAL_ROOT/Hardware"
     mkdir -p "$EXTERNAL_DEVCACHE"/{npm,pnpm,yarn,python,cargo,go/mod,go/cache,gradle,swiftpm,xdg}
-    mkdir -p "$EXTERNAL_APPS"
 fi
 echo "Internal (macOS + Homebrew + Docker):"
 echo "  Homebrew: /opt/homebrew (unchanged)"
@@ -125,41 +120,10 @@ echo "  Documents"
 echo "  Downloads"
 echo "  Hardware"
 echo "  DevCache"
-echo "  Apps"
 info "External directory layout ready."
 
-# Safe merge: rsync src to dest (faithful mirror), then rename src to timestamp backup
-# Usage: safe_merge_move <source_dir> <dest_dir> <backup_base_name>
-safe_merge_move() {
-    local src="$1" dest="$2" backup_name="$3"
-    [ "$DRY_RUN" = "1" ] && { log_action "Would merge $src → $dest and replace $src with symlink"; return 0; }
-    [ ! -d "$src" ] && return 0
-    [ -L "$src" ] && return 0
-    log_action "Merging $src → $dest (rsync)..."
-    mkdir -p "$dest"
-    rsync -a "$src"/ "$dest"/
-    local stamp=$(date +%Y%m%d-%H%M%S)
-    local backup="$src.backup.$stamp"
-    if [ -d "$src" ] && [ ! -L "$src" ]; then
-        mv "$src" "$backup"
-        log_action "Renamed $src → $backup"
-    fi
-}
-
-# Ensure ~/Developer is a symlink to external Developer (migrate ~/Projects, ~/Code, or real ~/Developer first)
+# Ensure ~/Developer is a symlink to external Developer
 section "Developer folder (external-first)"
-if [ -d "$HOME/Projects" ] && [ ! -L "$HOME/Projects" ]; then
-    log_action "Migrating ~/Projects → $EXTERNAL_DEVELOPER"
-    safe_merge_move "$HOME/Projects" "$EXTERNAL_DEVELOPER" "Projects"
-fi
-if [ -d "$HOME/Code" ] && [ ! -L "$HOME/Code" ]; then
-    log_action "Migrating ~/Code → $EXTERNAL_DEVELOPER"
-    safe_merge_move "$HOME/Code" "$EXTERNAL_DEVELOPER" "Code"
-fi
-if [ -d "$HOME/Developer" ] && [ ! -L "$HOME/Developer" ]; then
-    log_action "Moving ~/Developer contents to $EXTERNAL_DEVELOPER"
-    safe_merge_move "$HOME/Developer" "$EXTERNAL_DEVELOPER" "Developer"
-fi
 if [ -L "$HOME/Developer" ] && [ "$(readlink "$HOME/Developer")" = "$EXTERNAL_DEVELOPER" ]; then
     info "~/Developer already points to $EXTERNAL_DEVELOPER"
 elif [ "$DRY_RUN" != "1" ]; then
@@ -167,27 +131,6 @@ elif [ "$DRY_RUN" != "1" ]; then
     info "Created ~/Developer → $EXTERNAL_DEVELOPER"
 else
     log_action "Would create ~/Developer → $EXTERNAL_DEVELOPER"
-fi
-
-# Optional: move Downloads to external
-if [ "$MOVE_DOWNLOADS" = "1" ]; then
-    if [ -d "$HOME/Downloads" ] && [ ! -L "$HOME/Downloads" ]; then
-        log_action "Moving ~/Downloads to $EXTERNAL_DOWNLOADS"
-        safe_merge_move "$HOME/Downloads" "$EXTERNAL_DOWNLOADS" "Downloads"
-        if [ "$DRY_RUN" != "1" ] && [ ! -L "$HOME/Downloads" ]; then
-            ln -sfn "$EXTERNAL_DOWNLOADS" "$HOME/Downloads"
-            info "~/Downloads → $EXTERNAL_DOWNLOADS"
-        fi
-    elif [ -L "$HOME/Downloads" ]; then
-        info "~/Downloads already a symlink"
-    else
-        if [ "$DRY_RUN" != "1" ]; then
-            ln -sfn "$EXTERNAL_DOWNLOADS" "$HOME/Downloads"
-            info "Created ~/Downloads → $EXTERNAL_DOWNLOADS"
-        fi
-    fi
-else
-    info "Downloads left on internal (set MOVE_DOWNLOADS=1 in workflow.env to move)"
 fi
 
 # Create necessary directories (internal)
@@ -326,9 +269,10 @@ fi
 # Install development tools
 section "Installing Development Tools"
 dev_tools=(
-    "cursor"               # Cursor IDE
+    "visual-studio-code"   # VS Code
     "docker"               # Containerization
     "github"               # GitHub Desktop
+    "warp"                 # AI Terminal
 )
 
 echo "Installing development tools..."
@@ -344,21 +288,6 @@ for tool in "${dev_tools[@]}"; do
         warn "Failed to install $tool."
     fi
 done
-
-# Optional: Terminal with AI (Warp). macOS Terminal has no built-in AI; Warp offers agents, suggestions, blocks.
-# Alternative: Lacy Shell (lacy.sh) adds AI to zsh/bash via natural-language input.
-if [ "${INSTALL_WARP:-}" = "1" ]; then
-    echo "Installing Warp (AI terminal)..."
-    if brew list --cask "warp" &>/dev/null; then
-        info "Warp is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install --cask warp"
-    elif brew install --cask "warp"; then
-        info "Warp installed successfully! Use it when you want AI in the terminal."
-    else
-        warn "Failed to install Warp."
-    fi
-fi
 
 # Note: Node + TypeScript come from NVM + npm (below). No separate brew install needed.
 
@@ -455,150 +384,59 @@ for db in "${databases[@]}"; do
     fi
 done
 
-# Install applications
-# These apps MUST stay on the internal macOS drive.
-# Do not relocate to WorkFlow/Apps.
-# They integrate deeply with macOS (menu bar, login items, permissions, etc.)
-section "Installing Applications"
-apps=(
-    "appcleaner"           # App Uninstaller
-    "thebrowsercompany-dia" # Dia Browser
-    "cleanmymac"          # Clean My Mac X
-    "parsec"              # Remote desktop
-    "bartender"            # Menu Bar Manager
-    "alt-tab"              # Windows-like alt-tab
-    "synergy"              # Network KVM
-    "google-chrome"        # Chrome Browser
-    "cleanshot"            # ScreenShot App
-    "keka"                 # Zip File Manager
-    "nordpass"             # Password Manager
-    "raycast"              # Spotlight Replacement
-    "spotify"              # Music
-)
+# Set up VS Code settings and extensions
+section "Setting Up VS Code"
+VSCODE_USER="$HOME/Library/Application Support/Code/User"
+VSCODE_SETTINGS="./config-files/vscode/settings.json"
+VSCODE_EXTENSIONS="./config-files/vscode/extensions.json"
 
-echo "Installing applications..."
-for app in "${apps[@]}"; do
-    echo "Installing $app..."
-    if brew list --cask "$app" &>/dev/null; then
-        info "$app is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install --cask $app"
-    elif brew install --cask "$app"; then
-        info "$app installed successfully!"
-    else
-        warn "Failed to install $app."
-    fi
-done
-info "System-integrated apps were installed to /Applications (internal drive)."
-info "Large creative apps can optionally be installed manually to /Volumes/WorkFlow/Apps."
-
-# Deskin (remote desktop) has no Homebrew cask. Install manually from App Store or https://deskin.io
-info "Deskin: install from App Store or deskin.io if needed (no Homebrew cask)."
-
-# Install Cursor CLI (needed before profile import)
-section "Installing Cursor CLI"
-if ! command -v cursor &> /dev/null; then
-    echo "Installing Cursor CLI..."
-    curl https://cursor.com/install -fsS | bash
-    info "Cursor CLI installed successfully!"
-else
-    info "Cursor CLI already installed."
-fi
-
-# Set up Cursor from exported profile (config-files/cursor profile.code-profile)
-section "Setting Up Cursor from Exported Profile"
-CURSOR_USER="$HOME/Library/Application Support/Cursor/User"
-PROFILE_FILE="./config-files/cursor profile.code-profile"
 if [ "$DRY_RUN" != "1" ]; then
-    mkdir -p "$CURSOR_USER"
+    mkdir -p "$VSCODE_USER"
 fi
 
-if [ -f "$PROFILE_FILE" ] && [ "$DRY_RUN" != "1" ]; then
-    # Parse .code-profile: unwrap settings/keybindings and write to Cursor User; list extension IDs
-    EXT_IDS_FILE=$(mktemp)
-    python3 - "$PROFILE_FILE" "$CURSOR_USER" "$EXT_IDS_FILE" << 'PYTHON_SCRIPT'
-import json
-import sys
-import os
-
-profile_path = sys.argv[1]
-cursor_user = os.path.expanduser(sys.argv[2])
-ext_ids_file = sys.argv[3]
-
-with open(profile_path) as f:
-    d = json.load(f)
-
-def unwrap(obj, key="settings"):
-    for _ in range(5):
-        if isinstance(obj, str):
-            obj = json.loads(obj)
-        elif isinstance(obj, dict) and key in obj and len(obj) == 1:
-            obj = obj[key]
-        else:
-            break
-    return obj
-
-# Settings
-raw_settings = d.get("settings")
-if raw_settings is not None:
-    settings = unwrap(raw_settings)
-    if isinstance(settings, dict):
-        with open(os.path.join(cursor_user, "settings.json"), "w") as out:
-            json.dump(settings, out, indent=4)
-
-# Keybindings (optional)
-raw_keybindings = d.get("keybindings")
-if raw_keybindings is not None:
-    keybindings = unwrap(raw_keybindings, "keybindings")
-    if isinstance(keybindings, list):
-        with open(os.path.join(cursor_user, "keybindings.json"), "w") as out:
-            json.dump(keybindings, out, indent=4)
-
-# Extension IDs for cursor --install-extension (extensions may be JSON string in profile)
-raw_ext = d.get("extensions")
-if isinstance(raw_ext, str):
-    try:
-        raw_ext = json.loads(raw_ext)
-    except json.JSONDecodeError:
-        raw_ext = []
-ext_ids = []
-for ext in (raw_ext or []):
-    if isinstance(ext, dict):
-        ident = ext.get("identifier") or ext.get("id")
-        if isinstance(ident, dict) and "id" in ident:
-            ext_ids.append(ident["id"])
-        elif isinstance(ident, str):
-            ext_ids.append(ident)
-with open(ext_ids_file, "w") as out:
-    for eid in ext_ids:
-        out.write(eid + "\n")
-PYTHON_SCRIPT
-    if [ $? -eq 0 ]; then
-        info "Cursor settings and keybindings applied from profile."
-    else
-        warn "Failed to parse Cursor profile."
+# Copy settings.json
+if [ -f "$VSCODE_SETTINGS" ]; then
+    if [ -f "$VSCODE_USER/settings.json" ]; then
+        backup_if_exists "$VSCODE_USER/settings.json"
     fi
-
-    # Install extensions from profile if Cursor CLI is available
-    if command -v cursor &>/dev/null && [ -s "$EXT_IDS_FILE" ]; then
-        while IFS= read -r ext_id; do
-            [ -z "$ext_id" ] && continue
-            if cursor --install-extension "$ext_id" --force 2>/dev/null; then
-                info "Installed extension: $ext_id"
-            else
-                warn "Failed to install $ext_id"
-            fi
-        done < "$EXT_IDS_FILE"
+    if [ "$DRY_RUN" != "1" ]; then
+        cp "$VSCODE_SETTINGS" "$VSCODE_USER/settings.json"
     fi
-    rm -f "$EXT_IDS_FILE"
-
-    # Copy raw profile for fallback UI import (Preferences → Profiles → Import)
-    cp "$PROFILE_FILE" "$CURSOR_USER/cursor-profile.code-profile"
-    info "Cursor profile imported. Fallback: Cursor → Preferences → Profiles → Import → cursor-profile.code-profile"
-elif [ -f "$PROFILE_FILE" ] && [ "$DRY_RUN" = "1" ]; then
-    log_action "Would apply Cursor profile from $PROFILE_FILE"
+    info "VS Code settings applied from $VSCODE_SETTINGS"
 else
-    warn "Cursor profile not found at $PROFILE_FILE"
+    warn "VS Code settings not found at $VSCODE_SETTINGS"
+fi
+
+# Install custom theme (symlink to ~/.vscode/extensions)
+DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
+THEME_SRC="$DOTFILES_DIR/config-files/vscode/themes/onedark-catppuccin"
+THEME_DEST="$HOME/.vscode/extensions/onedark-catppuccin"
+if [ -d "$THEME_SRC" ]; then
+    if [ "$DRY_RUN" != "1" ]; then
+        mkdir -p "$HOME/.vscode/extensions"
+        ln -sfn "$THEME_SRC" "$THEME_DEST"
+    fi
+    info "Custom theme linked: $THEME_DEST → $THEME_SRC"
+else
+    warn "Custom theme not found at $THEME_SRC"
+fi
+
+# Install extensions from extensions.json
+if [ -f "$VSCODE_EXTENSIONS" ] && command -v code &>/dev/null; then
+    echo "Installing VS Code extensions..."
+    for ext_id in $(python3 -c "import json; [print(e) for e in json.load(open('$VSCODE_EXTENSIONS'))['recommendations']]" 2>/dev/null); do
+        if [ "$DRY_RUN" = "1" ]; then
+            log_action "Would install extension: $ext_id"
+        elif code --install-extension "$ext_id" --force 2>/dev/null; then
+            info "Installed extension: $ext_id"
+        else
+            warn "Failed to install $ext_id"
+        fi
+    done
+elif [ -f "$VSCODE_EXTENSIONS" ]; then
+    warn "VS Code CLI (code) not found. Install extensions manually or run: code --install-extension <id>"
+else
+    warn "Extensions list not found at $VSCODE_EXTENSIONS"
 fi
 
 # Install NVM (Node Version Manager) – primary Node for dev; global npm packages installed after
@@ -781,16 +619,45 @@ if [ "${SET_MACOS_DEFAULTS:-0}" = "1" ]; then
     info "Dock: edit dev-setup.sh (defaults write com.apple.dock ...) and re-run with SET_MACOS_DEFAULTS=1 to apply, then killall Dock."
 fi
 
+# --- Downloads sync (weekly Friday backup + organize) ---
+section "Setting up Downloads Sync (weekly)"
+PLIST_LABEL="com.sprinkels.downloads-sync"
+PLIST_SRC="$DOTFILES_DIR/scripts/$PLIST_LABEL.plist"
+SYNC_SCRIPT="$DOTFILES_DIR/scripts/downloads-sync.sh"
+PLIST_DEST="$HOME/Library/LaunchAgents/$PLIST_LABEL.plist"
+SYNC_LOG="$HOME/Library/Logs/downloads-sync.log"
+
+if [ -f "$PLIST_SRC" ] && [ -f "$SYNC_SCRIPT" ]; then
+    if [ "$DRY_RUN" != "1" ]; then
+        mkdir -p "$HOME/Library/LaunchAgents"
+        # Fill in paths in the plist
+        sed -e "s|DOWNLOADS_SYNC_SCRIPT_PATH|$SYNC_SCRIPT|g" \
+            -e "s|DOWNLOADS_SYNC_LOG_PATH|$SYNC_LOG|g" \
+            "$PLIST_SRC" > "$PLIST_DEST"
+        # Unload if already loaded, then load
+        launchctl unload "$PLIST_DEST" 2>/dev/null || true
+        launchctl load "$PLIST_DEST"
+        info "Downloads sync installed: runs every Friday at noon."
+        info "Log: $SYNC_LOG"
+        info "Run manually: bash $SYNC_SCRIPT"
+    else
+        log_action "Would install launchd plist for weekly downloads sync"
+    fi
+else
+    warn "Downloads sync script or plist not found. Skipping."
+fi
+
 section "Setup Complete!"
 echo "🎉 Your Full Stack Web Development environment has been set up! 🎉"
 echo ""
-echo "Internal: Homebrew + Docker unchanged. Developer, caches, and (optionally) Downloads live on $EXTERNAL_ROOT"
-echo "Config:   $WORKFLOW_ENV (edit and re-run to change CODE_DIR_NAME, MOVE_DOWNLOADS)"
+echo "Internal: Homebrew + Docker unchanged. Developer and caches live on $EXTERNAL_ROOT"
+echo "Config:   $WORKFLOW_ENV (edit and re-run to change CODE_DIR_NAME)"
 echo "Dotfiles: copied to ~/dotfiles for backup"
 echo "Oh My Posh: ~/.config/ohmyposh/sprinks.omp.json"
-echo "Cursor: profile from config-files/cursor profile.code-profile (or Preferences → Profiles → Import)"
+echo "VS Code: settings from config-files/vscode/settings.json, extensions from config-files/vscode/extensions.json"
 echo ""
-echo "Optional: INSTALL_WARP=1 (Warp terminal); SET_MACOS_DEFAULTS=1 (default browser/dock); set in workflow.env: MOVE_DOWNLOADS=1"
+echo "Optional: SET_MACOS_DEFAULTS=1 (default browser/dock)"
+echo "Downloads sync: runs every Friday (launchd), syncs ~/Downloads to $EXTERNAL_ROOT/Downloads and organizes by type"
 echo "DRY_RUN=1 to preview changes without applying."
 echo ""
 echo "Run 'source ~/.zshrc' (or restart terminal) to apply cache paths and aliases."

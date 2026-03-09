@@ -1,0 +1,19 @@
+{
+    "name": "onedark-catppuccin",
+    "displayName": "One Dark Catppuccin",
+    "description": "One Dark Pro UI with Catppuccin Frappé syntax colors",
+    "version": "1.0.0",
+    "engines": {
+        "vscode": "^1.0.0"
+    },
+    "categories": ["Themes"],
+    "contributes": {
+        "themes": [
+            {
+                "label": "One Dark Catppuccin",
+                "uiTheme": "vs-dark",
+                "path": "./themes/onedark-catppuccin-color-theme.json"
+            }
+        ]
+    }
+}
