@@ -48,6 +48,7 @@ export NVM_DIR="$HOME/.nvm"
 
 # Oh My Posh setup
 if command -v oh-my-posh &> /dev/null; then
+    unset POSH_THEME
     eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/sprinks.omp.json")"
 fi
 

@@ -188,6 +188,21 @@ else
     warn "sprinks.omp.json not found in config-files directory."
 fi
 
+# Copy Ghostty config
+GHOSTTY_CONFIG_SRC="./config-files/ghostty/config"
+GHOSTTY_CONFIG_DEST="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+if [ -f "$GHOSTTY_CONFIG_SRC" ]; then
+    if [ "$DRY_RUN" != "1" ]; then
+        mkdir -p "$HOME/Library/Application Support/com.mitchellh.ghostty"
+        if [ -f "$GHOSTTY_CONFIG_DEST" ]; then
+            backup_if_exists "$GHOSTTY_CONFIG_DEST"
+        fi
+        cp "$GHOSTTY_CONFIG_SRC" "$GHOSTTY_CONFIG_DEST"
+    fi
+    info "Ghostty config copied successfully!"
+else
+    warn "Ghostty config not found in config-files directory."
+fi
 
 # Check if Homebrew is installed
 section "Setting up Homebrew"
@@ -272,7 +287,7 @@ dev_tools=(
     "visual-studio-code"   # VS Code
     "docker"               # Containerization
     "github"               # GitHub Desktop
-    "warp"                 # AI Terminal
+    "ghostty"              # Terminal emulator
 )
 
 echo "Installing development tools..."

@@ -1,0 +1,62 @@
+# Ghostty Config — One Dark Catppuccin
+
+# --- Font ---
+font-family = JetBrainsMono Nerd Font
+font-size = 14
+font-thicken = true
+adjust-cell-height = 35%
+
+# --- Window ---
+window-padding-x = 16
+window-padding-y = 12
+window-padding-balance = true
+window-decoration = true
+macos-titlebar-style = native
+window-theme = dark
+background-opacity = 0.96
+background-blur-radius = 20
+unfocused-split-opacity = 0.9
+
+# --- Cursor ---
+cursor-style = bar
+cursor-style-blink = true
+cursor-color = #8caaee
+cursor-text = #24272f
+
+# --- Mouse ---
+mouse-hide-while-typing = true
+
+# --- Shell integration ---
+shell-integration = none
+
+# --- Colors (One Dark bg + Catppuccin Frappe palette) ---
+background = #24272f
+foreground = #abb2bf
+selection-background = #677696
+selection-foreground = #d7dae0
+
+# Normal colors
+palette = 0=#3f4451
+palette = 1=#e78284
+palette = 2=#a6d189
+palette = 3=#e5c890
+palette = 4=#8caaee
+palette = 5=#ca9ee6
+palette = 6=#81c8be
+palette = 7=#d7dae0
+
+# Bright colors
+palette = 8=#4f5666
+palette = 9=#e78284
+palette = 10=#a6d189
+palette = 11=#e5c890
+palette = 12=#8caaee
+palette = 13=#ca9ee6
+palette = 14=#81c8be
+palette = 15=#d7dae0
+
+# --- Keybinds ---
+keybind = super+t=new_tab
+keybind = super+w=close_surface
+keybind = super+d=new_split:right
+keybind = super+shift+d=new_split:down
