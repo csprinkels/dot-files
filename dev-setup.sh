@@ -304,6 +304,45 @@ for tool in "${dev_tools[@]}"; do
     fi
 done
 
+# Install apps
+section "Installing Apps"
+apps=(
+    "appcleaner"                # App Uninstaller
+    "thebrowsercompany-dia"     # Dia Browser
+    "cleanmymac"                # Clean My Mac X
+    "parsec"                    # Remote desktop
+    "bartender"                 # Menu Bar Manager
+    "alt-tab"                   # Windows-like alt-tab
+    "synergy"                   # Network KVM
+    "google-chrome"             # Chrome Browser
+    "cleanshot"                 # ScreenShot App
+    "keka"                      # Zip File Manager
+    "nordpass"                  # Password Manager
+    "alfred"                    # Spotlight Replacement
+    "spotify"                   # Music
+    "xcodes-app"                # Xcode version manager (Xcode itself requires App Store)
+    "godot"                     # Godot game engine
+    "affinity"                  # Affinity Suite (Designer, Photo, Publisher)
+    "claude"                    # Claude desktop app
+    "rectangle-pro"              # Window management
+    "soundsource"                # Audio control
+    "downie"                     # Video downloader
+)
+
+echo "Installing apps..."
+for app in "${apps[@]}"; do
+    echo "Installing $app..."
+    if brew list --cask "$app" &>/dev/null; then
+        info "$app is already installed."
+    elif [ "$DRY_RUN" = "1" ]; then
+        log_action "Would install --cask $app"
+    elif brew install --cask "$app"; then
+        info "$app installed successfully!"
+    else
+        warn "Failed to install $app."
+    fi
+done
+
 # Note: Node + TypeScript come from NVM + npm (below). No separate brew install needed.
 
 # Install package managers and build tools
@@ -497,7 +536,7 @@ if [ "$DRY_RUN" = "1" ]; then
 elif command -v npm &>/dev/null; then
     echo "Installing global npm packages..."
     # Dropped deprecated: create-react-app, @vue/cli, gatsby-cli (use npx create-vite / npx create-vue)
-    npm install -g typescript @angular/cli next eslint prettier nodemon ts-node
+    npm install -g typescript @angular/cli next eslint prettier nodemon ts-node @anthropic-ai/claude-code
     info "Node.js global packages installed successfully!"
 else
     warn "npm not found (NVM not loaded?). Skipping global npm packages."
@@ -529,6 +568,29 @@ if [ ! -d "$HOME/.oh-my-zsh" ]; then
     info "Oh My Zsh installed successfully!"
 else
     info "Oh My Zsh already installed."
+fi
+
+# Install Oh My Zsh plugins
+ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+    if [ "$DRY_RUN" = "1" ]; then
+        log_action "Would clone zsh-autosuggestions"
+    else
+        git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+        info "zsh-autosuggestions installed!"
+    fi
+else
+    info "zsh-autosuggestions already installed."
+fi
+if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+    if [ "$DRY_RUN" = "1" ]; then
+        log_action "Would clone zsh-syntax-highlighting"
+    else
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+        info "zsh-syntax-highlighting installed!"
+    fi
+else
+    info "zsh-syntax-highlighting already installed."
 fi
 
 # Deploy .zshrc NOW (after Oh My Zsh, so its template doesn't clobber ours)
@@ -583,7 +645,11 @@ export NVM_DIR="$HOME/.nvm"
 
 # Oh My Posh setup
 if command -v oh-my-posh &> /dev/null; then
-    eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/sprinks.omp.json")"
+    eval "$(oh-my-posh init zsh)"
+    _omp_config="$HOME/.config/ohmyposh/sprinks.omp.json"
+    _omp_real_bin="$_omp_executable"
+    function _omp_bin() { "$_omp_real_bin" --config "$_omp_config" "$@"; }
+    _omp_executable=_omp_bin
 fi
 CUSTOM_EOF
     fi
