@@ -49,7 +49,7 @@
     },
 
     "window.titleBarStyle": "custom",
-    "window.commandCenter": false,
+    "window.commandCenter": true,
     "window.menuBarVisibility": "compact",
     "breadcrumbs.enabled": false,
     "explorer.compactFolders": false,
@@ -65,7 +65,8 @@
     "workbench.tips.enabled": false,
     "workbench.editor.editorActionsLocation": "hidden",
     "workbench.editor.tabCloseButton": "left",
-    "workbench.layoutControl.enabled": false,
+    "workbench.layoutControl.enabled": true,
+    "workbench.layoutControl.type": "toggles",
     "security.workspace.trust.untrustedFiles": "open",
 
     "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font Mono', monospace",
