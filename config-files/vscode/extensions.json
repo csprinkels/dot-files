@@ -12,7 +12,6 @@
         "swiftlang.swift-vscode",
         "angular.ng-template",
         "formulahendry.auto-rename-tag",
-        "meganrogge.template-string-converter",
-        "streetsidesoftware.code-spell-checker"
+        "meganrogge.template-string-converter"
     ]
 }

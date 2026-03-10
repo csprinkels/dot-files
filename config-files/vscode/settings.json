@@ -131,8 +131,5 @@
         "statusBar.foreground": "#717687",
         "editorLineNumber.foreground": "#464a5b",
         "statusBarItem.hoverBackground": "#161921"
-    },
-    "workbench.settings.applyToAllProfiles": [
-        "workbench.colorCustomizations"
-    ]
+    }
 }
