@@ -48,11 +48,7 @@ export NVM_DIR="$HOME/.nvm"
 
 # Oh My Posh setup
 if command -v oh-my-posh &> /dev/null; then
-    eval "$(oh-my-posh init zsh)"
-    _omp_config="$HOME/.config/ohmyposh/sprinks.omp.json"
-    _omp_real_bin="$_omp_executable"
-    function _omp_bin() { "$_omp_real_bin" --config "$_omp_config" "$@"; }
-    _omp_executable=_omp_bin
+    eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/sprinks.omp.json")"
 fi
 
 # Utility
@@ -60,3 +56,10 @@ reload_zsh() {
     source ~/.zshrc
     echo "Zsh configuration reloaded!"
 }
+
+# === WorkFlow external-drive paths ===
+export PIP_CACHE_DIR="/Volumes/WorkFlow/DevCache/python"
+export CARGO_HOME="/Volumes/WorkFlow/DevCache/cargo"
+export GOMODCACHE="/Volumes/WorkFlow/DevCache/go/mod"
+export GOCACHE="/Volumes/WorkFlow/DevCache/go/cache"
+export XDG_CACHE_HOME="/Volumes/WorkFlow/DevCache/xdg"

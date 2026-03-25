@@ -645,11 +645,7 @@ export NVM_DIR="$HOME/.nvm"
 
 # Oh My Posh setup
 if command -v oh-my-posh &> /dev/null; then
-    eval "$(oh-my-posh init zsh)"
-    _omp_config="$HOME/.config/ohmyposh/sprinks.omp.json"
-    _omp_real_bin="$_omp_executable"
-    function _omp_bin() { "$_omp_real_bin" --config "$_omp_config" "$@"; }
-    _omp_executable=_omp_bin
+    eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/sprinks.omp.json")"
 fi
 CUSTOM_EOF
     fi
