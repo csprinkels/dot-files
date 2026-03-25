@@ -41,103 +41,16 @@ function log_action() {
 # Welcome message
 echo "🖥️  Work IT Computer Setup 🖥️"
 echo "==================================================="
-echo "This script will set up your work Mac (external-first: WorkFlow drive)."
+echo "This script will set up your work Mac for development."
 [ "$DRY_RUN" = "1" ] && echo -e "${YELLOW}DRY RUN: no changes will be made.${NC}"
 echo ""
-
-# --- External WorkFlow drive (external-first workflow) ---
-EXTERNAL_VOL_NAME="${EXTERNAL_VOL_NAME:-WorkFlow}"
-EXTERNAL_ROOT="/Volumes/$EXTERNAL_VOL_NAME"
-
-# Check external volume exists and is writable
-if [ ! -d "$EXTERNAL_ROOT" ]; then
-    error "External volume not found: $EXTERNAL_ROOT"
-    error "Plug in the drive named '$EXTERNAL_VOL_NAME' (or set EXTERNAL_VOL_NAME) and re-run."
-    exit 1
-fi
-if [ ! -w "$EXTERNAL_ROOT" ]; then
-    error "External volume not writable: $EXTERNAL_ROOT"
-    exit 1
-fi
-
-# Load workflow.env from external drive (safe: whitelist keys only, trim/strip quotes)
-WORKFLOW_ENV="$EXTERNAL_ROOT/workflow.env"
-WORKFLOW_ALLOWED_KEYS="CODE_DIR_NAME EXTERNAL_VOL_NAME"
-if [ -f "$WORKFLOW_ENV" ]; then
-    info "Loading config from $WORKFLOW_ENV"
-    while IFS= read -r line; do
-        [[ "$line" =~ ^#.*$ ]] && continue
-        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
-        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-            key="${BASH_REMATCH[1]}"
-            value="${BASH_REMATCH[2]}"
-            # Whitelist: only accept known keys
-            [[ " $WORKFLOW_ALLOWED_KEYS " != *" $key "* ]] && continue
-            # Trim leading/trailing whitespace
-            value="${value#"${value%%[![:space:]]*}"}"
-            value="${value%"${value##*[![:space:]]}"}"
-            # Strip one layer of surrounding double or single quotes
-            [[ "$value" =~ ^\"(.*)\"$ ]] && value="${BASH_REMATCH[1]}"
-            [[ "$value" =~ ^\'(.*)\'$ ]] && value="${BASH_REMATCH[1]}"
-            export "$key=$value"
-        fi
-    done < "$WORKFLOW_ENV"
-else
-    info "Creating default config at $WORKFLOW_ENV"
-    if [ "$DRY_RUN" != "1" ]; then
-        cat > "$WORKFLOW_ENV" << 'WORKFLOW_ENV_EOF'
-# WorkFlow external-drive config for work-setup.sh
-# You can edit these and re-run the script.
-
-CODE_DIR_NAME=Developer
-WORKFLOW_ENV_EOF
-    fi
-fi
-
-CODE_DIR_NAME="${CODE_DIR_NAME:-Developer}"
-EXTERNAL_DEVELOPER="$EXTERNAL_ROOT/$CODE_DIR_NAME"
-EXTERNAL_DOWNLOADS="$EXTERNAL_ROOT/Downloads"
-EXTERNAL_DEVCACHE="$EXTERNAL_ROOT/DevCache"
-# Create directory layout on external drive (full WorkFlow structure)
-section "External drive: $EXTERNAL_VOL_NAME"
-if [ "$DRY_RUN" != "1" ]; then
-    mkdir -p "$EXTERNAL_ROOT/Assets"
-    mkdir -p "$EXTERNAL_ROOT/Creative"
-    mkdir -p "$EXTERNAL_DEVELOPER"
-    mkdir -p "$EXTERNAL_ROOT/Documents"
-    mkdir -p "$EXTERNAL_DOWNLOADS"
-    mkdir -p "$EXTERNAL_ROOT/Hardware"
-    mkdir -p "$EXTERNAL_DEVCACHE"/{npm,pnpm,yarn,python,cargo,go/mod,go/cache,gradle,swiftpm,xdg}
-fi
-echo "Internal (macOS + Homebrew + Docker):"
-echo "  Homebrew: /opt/homebrew (unchanged)"
-echo "  Docker:   internal disk images (unchanged)"
-echo "External ($EXTERNAL_ROOT):"
-echo "  Developer"
-echo "  Assets"
-echo "  Creative"
-echo "  Documents"
-echo "  Downloads"
-echo "  Hardware"
-echo "  DevCache"
-info "External directory layout ready."
-
-# Ensure ~/Developer is a symlink to external Developer
-section "Developer folder (external-first)"
-if [ -L "$HOME/Developer" ] && [ "$(readlink "$HOME/Developer")" = "$EXTERNAL_DEVELOPER" ]; then
-    info "~/Developer already points to $EXTERNAL_DEVELOPER"
-elif [ "$DRY_RUN" != "1" ]; then
-    ln -sfn "$EXTERNAL_DEVELOPER" "$HOME/Developer"
-    info "Created ~/Developer → $EXTERNAL_DEVELOPER"
-else
-    log_action "Would create ~/Developer → $EXTERNAL_DEVELOPER"
-fi
 
 # Create necessary directories (internal)
 section "Creating Directories"
 if [ "$DRY_RUN" != "1" ]; then
     mkdir -p "$HOME/.config/ohmyposh"
     mkdir -p "$HOME/dotfiles"
+    mkdir -p "$HOME/Developer"
 fi
 info "Directories created successfully!"
 
@@ -535,24 +448,6 @@ else
     warn "npm not found (NVM not loaded?). Skipping global npm packages."
 fi
 
-# Redirect dev caches to external drive (reduces internal disk use)
-section "Redirecting dev caches to external"
-if [ "$DRY_RUN" = "1" ]; then
-    log_action "Would set npm/pnpm/yarn/pip/cargo/go cache dirs to $EXTERNAL_DEVCACHE"
-else
-    if command -v npm &>/dev/null; then
-        npm config set cache "$EXTERNAL_DEVCACHE/npm"
-        log_action "npm cache → $EXTERNAL_DEVCACHE/npm"
-    fi
-    if command -v pnpm &>/dev/null; then
-        pnpm config set store-dir "$EXTERNAL_DEVCACHE/pnpm"
-        log_action "pnpm store → $EXTERNAL_DEVCACHE/pnpm"
-    fi
-    if command -v yarn &>/dev/null; then
-        yarn config set cache-folder "$EXTERNAL_DEVCACHE/yarn" 2>/dev/null && log_action "yarn cache → $EXTERNAL_DEVCACHE/yarn" || true
-    fi
-fi
-
 # Setup shell environment (Oh My Zsh may clobber .zshrc, so install it BEFORE any appends)
 section "Setting up Shell Environment"
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -651,27 +546,6 @@ else
     info "Custom configurations already exist in .zshrc."
 fi
 
-# WorkFlow env vars block (idempotent: check marker)
-WORKFLOW_BLOCK_MARKER="# === WorkFlow external-drive paths ==="
-if ! grep -q "$WORKFLOW_BLOCK_MARKER" "$HOME/.zshrc" 2>/dev/null; then
-    if [ "$DRY_RUN" != "1" ]; then
-        cat >> "$HOME/.zshrc" << WORKFLOW_ZSHRC_EOF
-
-$WORKFLOW_BLOCK_MARKER
-export PIP_CACHE_DIR="$EXTERNAL_DEVCACHE/python"
-export CARGO_HOME="$EXTERNAL_DEVCACHE/cargo"
-export GOMODCACHE="$EXTERNAL_DEVCACHE/go/mod"
-export GOCACHE="$EXTERNAL_DEVCACHE/go/cache"
-export XDG_CACHE_HOME="$EXTERNAL_DEVCACHE/xdg"
-WORKFLOW_ZSHRC_EOF
-        log_action "Appended WorkFlow cache paths to $HOME/.zshrc"
-    else
-        log_action "Would append WorkFlow cache block to $HOME/.zshrc"
-    fi
-else
-    info "WorkFlow cache block already in .zshrc"
-fi
-
 # Optional: macOS system defaults (default browser, dock). Set SET_MACOS_DEFAULTS=1 to run.
 if [ "${SET_MACOS_DEFAULTS:-0}" = "1" ]; then
     section "Optional: Setting macOS Defaults"
@@ -693,46 +567,15 @@ if [ "${SET_MACOS_DEFAULTS:-0}" = "1" ]; then
     info "Dock: edit work-setup.sh (defaults write com.apple.dock ...) and re-run with SET_MACOS_DEFAULTS=1 to apply, then killall Dock."
 fi
 
-# --- Downloads sync (weekly Friday backup + organize) ---
-section "Setting up Downloads Sync (weekly)"
-PLIST_LABEL="com.sprinkels.downloads-sync"
-PLIST_SRC="$DOTFILES_DIR/scripts/$PLIST_LABEL.plist"
-SYNC_SCRIPT="$DOTFILES_DIR/scripts/downloads-sync.sh"
-PLIST_DEST="$HOME/Library/LaunchAgents/$PLIST_LABEL.plist"
-SYNC_LOG="$HOME/Library/Logs/downloads-sync.log"
-
-if [ -f "$PLIST_SRC" ] && [ -f "$SYNC_SCRIPT" ]; then
-    if [ "$DRY_RUN" != "1" ]; then
-        mkdir -p "$HOME/Library/LaunchAgents"
-        # Fill in paths in the plist
-        sed -e "s|DOWNLOADS_SYNC_SCRIPT_PATH|$SYNC_SCRIPT|g" \
-            -e "s|DOWNLOADS_SYNC_LOG_PATH|$SYNC_LOG|g" \
-            "$PLIST_SRC" > "$PLIST_DEST"
-        # Unload if already loaded, then load
-        launchctl unload "$PLIST_DEST" 2>/dev/null || true
-        launchctl load "$PLIST_DEST"
-        info "Downloads sync installed: runs every Friday at noon."
-        info "Log: $SYNC_LOG"
-        info "Run manually: bash $SYNC_SCRIPT"
-    else
-        log_action "Would install launchd plist for weekly downloads sync"
-    fi
-else
-    warn "Downloads sync script or plist not found. Skipping."
-fi
-
 section "Setup Complete!"
 echo "🎉 Your work IT environment has been set up! 🎉"
 echo ""
-echo "Internal: Homebrew + Docker unchanged. Developer and caches live on $EXTERNAL_ROOT"
-echo "Config:   $WORKFLOW_ENV (edit and re-run to change CODE_DIR_NAME)"
 echo "Dotfiles: copied to ~/dotfiles for backup"
 echo "Oh My Posh: ~/.config/ohmyposh/sprinks.omp.json"
 echo "VS Code: settings from config-files/vscode/settings.json, extensions from config-files/vscode/extensions.json"
 echo ""
 echo "Optional: SET_MACOS_DEFAULTS=1 (default browser/dock)"
-echo "Downloads sync: runs every Friday (launchd), syncs ~/Downloads to $EXTERNAL_ROOT/Downloads and organizes by type"
 echo "DRY_RUN=1 to preview changes without applying."
 echo ""
-echo "Run 'source ~/.zshrc' (or restart terminal) to apply cache paths and aliases."
+echo "Run 'source ~/.zshrc' (or restart terminal) to apply aliases."
 echo "Happy coding! 💻"
