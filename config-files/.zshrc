@@ -57,9 +57,15 @@ reload_zsh() {
     echo "Zsh configuration reloaded!"
 }
 
-# === WorkFlow external-drive paths ===
-export PIP_CACHE_DIR="/Volumes/WorkFlow/DevCache/python"
-export CARGO_HOME="/Volumes/WorkFlow/DevCache/cargo"
-export GOMODCACHE="/Volumes/WorkFlow/DevCache/go/mod"
-export GOCACHE="/Volumes/WorkFlow/DevCache/go/cache"
-export XDG_CACHE_HOME="/Volumes/WorkFlow/DevCache/xdg"
+# === Caches on the Extended drive (only when it's plugged in) ===
+# Keeps tool caches off the internal disk. Without the drive, tools use their defaults.
+# pnpm needs nothing: it keeps its store on the same drive as the project.
+EXTENDED="/Volumes/MacOS Extended"
+if [ -d "$EXTENDED" ]; then
+    export npm_config_cache="$EXTENDED/DevCache/npm"
+    export YARN_CACHE_FOLDER="$EXTENDED/DevCache/yarn"
+    export PIP_CACHE_DIR="$EXTENDED/DevCache/python"
+    export GOMODCACHE="$EXTENDED/DevCache/go/mod"
+    export GOCACHE="$EXTENDED/DevCache/go/cache"
+    export XDG_CACHE_HOME="$EXTENDED/DevCache/xdg"
+fi

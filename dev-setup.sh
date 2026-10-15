@@ -38,105 +38,20 @@ function log_action() {
     fi
 }
 
+DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Welcome message
-echo "🖥️  Full Stack Web Development Environment Setup 🖥️"
+echo "🖥️  Headless Mac Setup 🖥️"
 echo "==================================================="
-echo "This script will set up your Mac for full stack web development (external-first: WorkFlow drive)."
+echo "Terminal, shell, and dev tools for a Mac you mostly reach from the terminal."
 [ "$DRY_RUN" = "1" ] && echo -e "${YELLOW}DRY RUN: no changes will be made.${NC}"
 echo ""
 
-# --- External WorkFlow drive (external-first workflow) ---
-EXTERNAL_VOL_NAME="${EXTERNAL_VOL_NAME:-WorkFlow}"
-EXTERNAL_ROOT="/Volumes/$EXTERNAL_VOL_NAME"
-
-# Check external volume exists and is writable
-if [ ! -d "$EXTERNAL_ROOT" ]; then
-    error "External volume not found: $EXTERNAL_ROOT"
-    error "Plug in the drive named '$EXTERNAL_VOL_NAME' (or set EXTERNAL_VOL_NAME) and re-run."
-    exit 1
-fi
-if [ ! -w "$EXTERNAL_ROOT" ]; then
-    error "External volume not writable: $EXTERNAL_ROOT"
-    exit 1
-fi
-
-# Load workflow.env from external drive (safe: whitelist keys only, trim/strip quotes)
-WORKFLOW_ENV="$EXTERNAL_ROOT/workflow.env"
-WORKFLOW_ALLOWED_KEYS="CODE_DIR_NAME EXTERNAL_VOL_NAME"
-if [ -f "$WORKFLOW_ENV" ]; then
-    info "Loading config from $WORKFLOW_ENV"
-    while IFS= read -r line; do
-        [[ "$line" =~ ^#.*$ ]] && continue
-        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
-        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
-            key="${BASH_REMATCH[1]}"
-            value="${BASH_REMATCH[2]}"
-            # Whitelist: only accept known keys
-            [[ " $WORKFLOW_ALLOWED_KEYS " != *" $key "* ]] && continue
-            # Trim leading/trailing whitespace
-            value="${value#"${value%%[![:space:]]*}"}"
-            value="${value%"${value##*[![:space:]]}"}"
-            # Strip one layer of surrounding double or single quotes
-            [[ "$value" =~ ^\"(.*)\"$ ]] && value="${BASH_REMATCH[1]}"
-            [[ "$value" =~ ^\'(.*)\'$ ]] && value="${BASH_REMATCH[1]}"
-            export "$key=$value"
-        fi
-    done < "$WORKFLOW_ENV"
-else
-    info "Creating default config at $WORKFLOW_ENV"
-    if [ "$DRY_RUN" != "1" ]; then
-        cat > "$WORKFLOW_ENV" << 'WORKFLOW_ENV_EOF'
-# WorkFlow external-drive config for dev-setup.sh
-# You can edit these and re-run the script.
-
-CODE_DIR_NAME=Developer
-WORKFLOW_ENV_EOF
-    fi
-fi
-
-CODE_DIR_NAME="${CODE_DIR_NAME:-Developer}"
-EXTERNAL_DEVELOPER="$EXTERNAL_ROOT/$CODE_DIR_NAME"
-EXTERNAL_DOWNLOADS="$EXTERNAL_ROOT/Downloads"
-EXTERNAL_DEVCACHE="$EXTERNAL_ROOT/DevCache"
-# Create directory layout on external drive (full WorkFlow structure)
-section "External drive: $EXTERNAL_VOL_NAME"
-if [ "$DRY_RUN" != "1" ]; then
-    mkdir -p "$EXTERNAL_ROOT/Assets"
-    mkdir -p "$EXTERNAL_ROOT/Creative"
-    mkdir -p "$EXTERNAL_DEVELOPER"
-    mkdir -p "$EXTERNAL_ROOT/Documents"
-    mkdir -p "$EXTERNAL_DOWNLOADS"
-    mkdir -p "$EXTERNAL_ROOT/Hardware"
-    mkdir -p "$EXTERNAL_DEVCACHE"/{npm,pnpm,yarn,python,cargo,go/mod,go/cache,gradle,swiftpm,xdg}
-fi
-echo "Internal (macOS + Homebrew + Docker):"
-echo "  Homebrew: /opt/homebrew (unchanged)"
-echo "  Docker:   internal disk images (unchanged)"
-echo "External ($EXTERNAL_ROOT):"
-echo "  Developer"
-echo "  Assets"
-echo "  Creative"
-echo "  Documents"
-echo "  Downloads"
-echo "  Hardware"
-echo "  DevCache"
-info "External directory layout ready."
-
-# Ensure ~/Developer is a symlink to external Developer
-section "Developer folder (external-first)"
-if [ -L "$HOME/Developer" ] && [ "$(readlink "$HOME/Developer")" = "$EXTERNAL_DEVELOPER" ]; then
-    info "~/Developer already points to $EXTERNAL_DEVELOPER"
-elif [ "$DRY_RUN" != "1" ]; then
-    ln -sfn "$EXTERNAL_DEVELOPER" "$HOME/Developer"
-    info "Created ~/Developer → $EXTERNAL_DEVELOPER"
-else
-    log_action "Would create ~/Developer → $EXTERNAL_DEVELOPER"
-fi
-
-# Create necessary directories (internal)
+# Create necessary directories
 section "Creating Directories"
 if [ "$DRY_RUN" != "1" ]; then
     mkdir -p "$HOME/.config/ohmyposh"
+    mkdir -p "$HOME/.config/ghostty"
     mkdir -p "$HOME/dotfiles"
 fi
 info "Directories created successfully!"
@@ -188,20 +103,19 @@ else
     warn "sprinks.omp.json not found in config-files directory."
 fi
 
-# Copy Ghostty config
-GHOSTTY_CONFIG_SRC="./config-files/ghostty/config"
-GHOSTTY_CONFIG_DEST="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
-if [ -f "$GHOSTTY_CONFIG_SRC" ]; then
-    if [ "$DRY_RUN" != "1" ]; then
-        mkdir -p "$HOME/Library/Application Support/com.mitchellh.ghostty"
-        if [ -f "$GHOSTTY_CONFIG_DEST" ]; then
-            backup_if_exists "$GHOSTTY_CONFIG_DEST"
-        fi
-        cp "$GHOSTTY_CONFIG_SRC" "$GHOSTTY_CONFIG_DEST"
+# Terminal look (font, colors, padding). cmux runs on Ghostty's engine and reads this path.
+TERMINAL_CONFIG_SRC="./config-files/terminal.conf"
+TERMINAL_CONFIG_DEST="$HOME/.config/ghostty/config"
+if [ -f "$TERMINAL_CONFIG_SRC" ]; then
+    if [ -f "$TERMINAL_CONFIG_DEST" ]; then
+        backup_if_exists "$TERMINAL_CONFIG_DEST"
     fi
-    info "Ghostty config copied successfully!"
+    if [ "$DRY_RUN" != "1" ]; then
+        cp "$TERMINAL_CONFIG_SRC" "$TERMINAL_CONFIG_DEST"
+    fi
+    info "Terminal config copied to $TERMINAL_CONFIG_DEST (cmux reads it)."
 else
-    warn "Ghostty config not found in config-files directory."
+    warn "Terminal config not found at $TERMINAL_CONFIG_SRC."
 fi
 
 # Check if Homebrew is installed
@@ -209,7 +123,7 @@ section "Setting up Homebrew"
 if ! command -v brew &> /dev/null; then
     warn "Homebrew is not installed. Installing now..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    
+
     # Add Homebrew to PATH for the current session if it was just installed
     if [[ -d "/opt/homebrew/bin" ]]; then
         eval "$(/opt/homebrew/bin/brew shellenv)"
@@ -223,7 +137,7 @@ if ! command -v brew &> /dev/null; then
             echo 'eval "$(/usr/local/bin/brew shellenv)"' >> "$HOME/.zprofile"
         fi
     fi
-    
+
     info "Homebrew installed successfully!"
 else
     info "Homebrew is already installed."
@@ -239,7 +153,9 @@ info "Homebrew environment configured for your macOS version."
 # Update Homebrew (optional - skipped if version compatibility issues exist)
 echo "Checking for Homebrew updates..."
 # Try to update brew, but don't fail if it doesn't work due to version issues
-if brew update 2>/dev/null; then
+if [ "$DRY_RUN" = "1" ]; then
+    log_action "Would run brew update and brew upgrade"
+elif brew update 2>/dev/null; then
     echo "Upgrading Homebrew packages..."
     brew upgrade 2>/dev/null || warn "Some brew upgrades failed, continuing..."
     info "Homebrew updated successfully!"
@@ -258,18 +174,21 @@ else
     info "XCode Command Line Tools already installed."
 fi
 
-# Install Git if not already installed
-section "Setting up Git"
-if ! command -v git &> /dev/null; then
-    echo "Installing Git..."
-    brew install git
-    info "Git installed successfully!"
+# Everything else Homebrew installs is listed in the Brewfile.
+section "Installing from Brewfile"
+if [ "$DRY_RUN" = "1" ]; then
+    brew bundle list --all --file="$DOTFILES_DIR/Brewfile" | while read -r entry; do log_action "Would install $entry"; done
+elif brew bundle --file="$DOTFILES_DIR/Brewfile"; then
+    info "Brewfile installed successfully!"
 else
-    info "Git already installed."
+    warn "Some Brewfile entries failed. Run: brew bundle --file=$DOTFILES_DIR/Brewfile"
 fi
 
 # Configure Git if not configured and .gitconfig wasn't copied
-if [ ! -f "$HOME/.gitconfig" ] && [ -z "$(git config --global user.name)" ]; then
+section "Setting up Git"
+if [ "$DRY_RUN" = "1" ]; then
+    log_action "Would ask for your Git name and email if there's no .gitconfig"
+elif [ ! -f "$HOME/.gitconfig" ] && [ -z "$(git config --global user.name)" ]; then
     echo "Configuring Git..."
     read -p "Enter your Git username: " git_username
     read -p "Enter your Git email: " git_email
@@ -281,288 +200,59 @@ else
     info "Git already configured."
 fi
 
-# Install development tools
-section "Installing Development Tools"
-dev_tools=(
-    "visual-studio-code"   # VS Code
-    "docker"               # Containerization
-    "github"               # GitHub Desktop
-    "ghostty"              # Terminal emulator
-)
-
-echo "Installing development tools..."
-for tool in "${dev_tools[@]}"; do
-    echo "Installing $tool..."
-    if brew list --cask "$tool" &>/dev/null; then
-        info "$tool is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install --cask $tool"
-    elif brew install --cask "$tool"; then
-        info "$tool installed successfully!"
-    else
-        warn "Failed to install $tool."
-    fi
-done
-
-# Install apps
-section "Installing Apps"
-apps=(
-    "appcleaner"                # App Uninstaller
-    "thebrowsercompany-dia"     # Dia Browser
-    "cleanmymac"                # Clean My Mac X
-    "parsec"                    # Remote desktop
-    "bartender"                 # Menu Bar Manager
-    "alt-tab"                   # Windows-like alt-tab
-    "synergy"                   # Network KVM
-    "google-chrome"             # Chrome Browser
-    "cleanshot"                 # ScreenShot App
-    "keka"                      # Zip File Manager
-    "nordpass"                  # Password Manager
-    "alfred"                    # Spotlight Replacement
-    "spotify"                   # Music
-    "xcodes-app"                # Xcode version manager (Xcode itself requires App Store)
-    "godot"                     # Godot game engine
-    "affinity"                  # Affinity Suite (Designer, Photo, Publisher)
-    "claude"                    # Claude desktop app
-    "rectangle-pro"              # Window management
-    "soundsource"                # Audio control
-    "downie"                     # Video downloader
-)
-
-echo "Installing apps..."
-for app in "${apps[@]}"; do
-    echo "Installing $app..."
-    if brew list --cask "$app" &>/dev/null; then
-        info "$app is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install --cask $app"
-    elif brew install --cask "$app"; then
-        info "$app installed successfully!"
-    else
-        warn "Failed to install $app."
-    fi
-done
-
-# Note: Node + TypeScript come from NVM + npm (below). No separate brew install needed.
-
-# Install package managers and build tools
-section "Installing Package Managers & Build Tools"
-tools=(
-    "yarn"                 # JavaScript package manager
-    "pnpm"                 # Fast, disk space efficient package manager
-)
-
-echo "Installing package managers and build tools..."
-for tool in "${tools[@]}"; do
-    echo "Installing $tool..."
-    if brew list "$tool" &>/dev/null; then
-        info "$tool is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install $tool"
-    elif brew install "$tool"; then
-        info "$tool installed successfully!"
-    else
-        warn "Failed to install $tool."
-    fi
-done
-
-# Install Nerd Fonts for Oh My Posh themes
-section "Installing Nerd Fonts"
-nerd_fonts=(
-    "font-meslo-lg-nerd-font"      # Meslo Nerd Font (recommended)
-    "font-jetbrains-mono-nerd-font" # JetBrains Mono Nerd Font
-    "font-fira-code-nerd-font"     # Fira Code Nerd Font
-)
-
-echo "Installing Nerd Fonts for Oh My Posh themes..."
-for font in "${nerd_fonts[@]}"; do
-    echo "Installing $font..."
-    if brew list --cask "$font" &>/dev/null; then
-        info "$font is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install --cask $font"
-    elif brew install --cask "$font"; then
-        info "$font installed successfully!"
-    else
-        warn "Failed to install $font."
-    fi
-done
-
-# Install shell tools
-section "Installing Shell Tools"
-shell_tools=(
-    "fzf"                  # Fuzzy finder
-    "ripgrep"              # Better grep
-    "fd"                   # Better find
-    "bat"                  # Better cat
-    "jq"                   # JSON processor
-    "htop"                 # Process viewer
-    "gh"                   # GitHub CLI
-    "oh-my-posh"           # Prompt theme engine
-    "gitui"                # Git terminal UI
-    "lazygit"              # Git terminal UI (alternative)
-)
-
-echo "Installing shell tools..."
-for tool in "${shell_tools[@]}"; do
-    echo "Installing $tool..."
-    if brew list "$tool" &>/dev/null; then
-        info "$tool is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install $tool"
-    elif brew install "$tool"; then
-        info "$tool installed successfully!"
-    else
-        warn "Failed to install $tool."
-    fi
-done
-
-# Install databases
-section "Installing Databases"
-databases=(
-    "mysql"                # MySQL
-    "postgresql@15"        # PostgreSQL
-)
-
-echo "Installing databases..."
-for db in "${databases[@]}"; do
-    echo "Installing $db..."
-    if brew list "$db" &>/dev/null; then
-        info "$db is already installed."
-    elif [ "$DRY_RUN" = "1" ]; then
-        log_action "Would install $db"
-    elif brew install "$db"; then
-        info "$db installed successfully!"
-    else
-        warn "Failed to install $db."
-    fi
-done
-
-# Set up VS Code settings and extensions
-section "Setting Up VS Code"
-VSCODE_USER="$HOME/Library/Application Support/Code/User"
-VSCODE_SETTINGS="./config-files/vscode/settings.json"
-VSCODE_EXTENSIONS="./config-files/vscode/extensions.json"
-
-if [ "$DRY_RUN" != "1" ]; then
-    mkdir -p "$VSCODE_USER"
-fi
-
-# Copy settings.json
-if [ -f "$VSCODE_SETTINGS" ]; then
-    if [ -f "$VSCODE_USER/settings.json" ]; then
-        backup_if_exists "$VSCODE_USER/settings.json"
-    fi
-    if [ "$DRY_RUN" != "1" ]; then
-        cp "$VSCODE_SETTINGS" "$VSCODE_USER/settings.json"
-    fi
-    info "VS Code settings applied from $VSCODE_SETTINGS"
-else
-    warn "VS Code settings not found at $VSCODE_SETTINGS"
-fi
-
-# Install custom theme (symlink to ~/.vscode/extensions)
-DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
-THEME_SRC="$DOTFILES_DIR/config-files/vscode/themes/onedark-catppuccin"
-THEME_DEST="$HOME/.vscode/extensions/onedark-catppuccin"
-if [ -d "$THEME_SRC" ]; then
-    if [ "$DRY_RUN" != "1" ]; then
-        mkdir -p "$HOME/.vscode/extensions"
-        ln -sfn "$THEME_SRC" "$THEME_DEST"
-    fi
-    info "Custom theme linked: $THEME_DEST → $THEME_SRC"
-else
-    warn "Custom theme not found at $THEME_SRC"
-fi
-
-# Install extensions from extensions.json
-if [ -f "$VSCODE_EXTENSIONS" ] && command -v code &>/dev/null; then
-    echo "Installing VS Code extensions..."
-    for ext_id in $(python3 -c "import json; [print(e) for e in json.load(open('$VSCODE_EXTENSIONS'))['recommendations']]" 2>/dev/null); do
-        if [ "$DRY_RUN" = "1" ]; then
-            log_action "Would install extension: $ext_id"
-        elif code --install-extension "$ext_id" --force 2>/dev/null; then
-            info "Installed extension: $ext_id"
-        else
-            warn "Failed to install $ext_id"
-        fi
-    done
-elif [ -f "$VSCODE_EXTENSIONS" ]; then
-    warn "VS Code CLI (code) not found. Install extensions manually or run: code --install-extension <id>"
-else
-    warn "Extensions list not found at $VSCODE_EXTENSIONS"
-fi
-
 # Install NVM (Node Version Manager) – primary Node for dev; global npm packages installed after
 section "Installing NVM"
 # Resolve latest NVM version from GitHub (falls back to known good)
-NVM_LATEST=$(curl -fsSL -o /dev/null -w '%{redirect_url}' https://github.com/nvm-sh/nvm/releases/latest 2>/dev/null \
+NVM_LATEST=$(curl -fsS -o /dev/null -w '%{redirect_url}' https://github.com/nvm-sh/nvm/releases/latest 2>/dev/null \
     | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "v0.40.1")
 if [ "$DRY_RUN" = "1" ]; then
     log_action "Would install NVM ($NVM_LATEST) + Node LTS + global npm packages"
 elif [ ! -d "$HOME/.nvm" ]; then
     echo "Installing NVM ($NVM_LATEST)..."
     curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_LATEST}/install.sh" | bash
-    
+
     # Load NVM for this session
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    
+
     # Install LTS version of Node.js
     nvm install --lts
     nvm use --lts
     nvm alias default 'lts/*'
-    
+
     info "NVM installed and configured with latest LTS Node.js version!"
 else
     info "NVM already installed."
-    
+
     # Load NVM for this session
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    
+
     # Make sure LTS version is installed
     nvm install --lts
     nvm use --lts
     nvm alias default 'lts/*'
-    
+
     info "NVM configured with latest LTS Node.js version!"
 fi
 
 # Global npm packages (after NVM so they land on NVM Node)
 section "Setting up Node.js environment (global packages)"
 if [ "$DRY_RUN" = "1" ]; then
-    log_action "Would install global npm packages: typescript @angular/cli next eslint prettier nodemon ts-node"
+    log_action "Would install global npm packages: typescript next eslint prettier nodemon ts-node @anthropic-ai/claude-code"
 elif command -v npm &>/dev/null; then
     echo "Installing global npm packages..."
-    # Dropped deprecated: create-react-app, @vue/cli, gatsby-cli (use npx create-vite / npx create-vue)
-    npm install -g typescript @angular/cli next eslint prettier nodemon ts-node @anthropic-ai/claude-code
+    npm install -g typescript next eslint prettier nodemon ts-node @anthropic-ai/claude-code
     info "Node.js global packages installed successfully!"
 else
     warn "npm not found (NVM not loaded?). Skipping global npm packages."
 fi
 
-# Redirect dev caches to external drive (reduces internal disk use)
-section "Redirecting dev caches to external"
-if [ "$DRY_RUN" = "1" ]; then
-    log_action "Would set npm/pnpm/yarn/pip/cargo/go cache dirs to $EXTERNAL_DEVCACHE"
-else
-    if command -v npm &>/dev/null; then
-        npm config set cache "$EXTERNAL_DEVCACHE/npm"
-        log_action "npm cache → $EXTERNAL_DEVCACHE/npm"
-    fi
-    if command -v pnpm &>/dev/null; then
-        pnpm config set store-dir "$EXTERNAL_DEVCACHE/pnpm"
-        log_action "pnpm store → $EXTERNAL_DEVCACHE/pnpm"
-    fi
-    if command -v yarn &>/dev/null; then
-        yarn config set cache-folder "$EXTERNAL_DEVCACHE/yarn" 2>/dev/null && log_action "yarn cache → $EXTERNAL_DEVCACHE/yarn" || true
-    fi
-fi
-
 # Setup shell environment (Oh My Zsh may clobber .zshrc, so install it BEFORE any appends)
 section "Setting up Shell Environment"
-if [ ! -d "$HOME/.oh-my-zsh" ]; then
+if [ "$DRY_RUN" = "1" ]; then
+    log_action "Would install Oh My Zsh if missing"
+elif [ ! -d "$HOME/.oh-my-zsh" ]; then
     echo "Installing Oh My Zsh..."
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
     info "Oh My Zsh installed successfully!"
@@ -607,135 +297,16 @@ else
     warn ".zshrc not found in config-files directory."
 fi
 
-# --- All .zshrc appends below (after deploy, so markers can be detected) ---
-
-# Custom aliases / NVM / Docker / Oh My Posh block (idempotent: check marker)
-# Skipped if config-files/.zshrc was copied earlier (it already contains these).
-if ! grep -q "# Custom aliases" "$HOME/.zshrc" 2>/dev/null; then
-    echo "Adding custom configurations to .zshrc..."
-    if [ "$DRY_RUN" != "1" ]; then
-        cat << 'CUSTOM_EOF' >> "$HOME/.zshrc"
-
-# Custom aliases
-alias ll="ls -la"
-alias cat="bat"
-alias find="fd"
-alias grep="rg"
-alias top="htop"
-
-# Git aliases
-alias gs="git status"
-alias ga="git add"
-alias gc="git commit"
-alias gp="git push"
-alias gl="git pull"
-alias gd="git diff"
-alias gco="git checkout"
-alias gb="git branch"
-
-# Docker aliases
-alias dc="docker-compose"
-alias dps="docker ps"
-alias dex="docker exec -it"
-
-# NVM setup
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-# Oh My Posh setup
-if command -v oh-my-posh &> /dev/null; then
-    eval "$(oh-my-posh init zsh --config "$HOME/.config/ohmyposh/sprinks.omp.json")"
-fi
-CUSTOM_EOF
-    fi
-    info "Custom configurations added to .zshrc!"
-else
-    info "Custom configurations already exist in .zshrc."
-fi
-
-# WorkFlow env vars block (idempotent: check marker)
-WORKFLOW_BLOCK_MARKER="# === WorkFlow external-drive paths ==="
-if ! grep -q "$WORKFLOW_BLOCK_MARKER" "$HOME/.zshrc" 2>/dev/null; then
-    if [ "$DRY_RUN" != "1" ]; then
-        cat >> "$HOME/.zshrc" << WORKFLOW_ZSHRC_EOF
-
-$WORKFLOW_BLOCK_MARKER
-export PIP_CACHE_DIR="$EXTERNAL_DEVCACHE/python"
-export CARGO_HOME="$EXTERNAL_DEVCACHE/cargo"
-export GOMODCACHE="$EXTERNAL_DEVCACHE/go/mod"
-export GOCACHE="$EXTERNAL_DEVCACHE/go/cache"
-export XDG_CACHE_HOME="$EXTERNAL_DEVCACHE/xdg"
-WORKFLOW_ZSHRC_EOF
-        log_action "Appended WorkFlow cache paths to $HOME/.zshrc"
-    else
-        log_action "Would append WorkFlow cache block to $HOME/.zshrc"
-    fi
-else
-    info "WorkFlow cache block already in .zshrc"
-fi
-
-# Optional: macOS system defaults (default browser, dock). Set SET_MACOS_DEFAULTS=1 to run.
-if [ "${SET_MACOS_DEFAULTS:-0}" = "1" ]; then
-    section "Optional: Setting macOS Defaults"
-    # Default browser (Dia). Requires: brew install defaultbrowser; then e.g. defaultbrowser dia
-    if command -v defaultbrowser &>/dev/null; then
-        if defaultbrowser dia 2>/dev/null; then
-            info "Default browser set to Dia."
-        else
-            warn "Could not set Dia as default browser. Run 'defaultbrowser' to see available browsers and set manually."
-        fi
-    else
-        brew install defaultbrowser 2>/dev/null && defaultbrowser dia 2>/dev/null || warn "Install defaultbrowser (brew install defaultbrowser) and set default browser in System Settings if desired."
-    fi
-    # Dock: uncomment and adjust to taste (then killall Dock)
-    # defaults write com.apple.dock autohide -bool true
-    # defaults write com.apple.dock orientation -string "left"
-    # defaults write com.apple.dock show-recents -bool false
-    # killall Dock
-    info "Dock: edit dev-setup.sh (defaults write com.apple.dock ...) and re-run with SET_MACOS_DEFAULTS=1 to apply, then killall Dock."
-fi
-
-# --- Downloads sync (weekly Friday backup + organize) ---
-section "Setting up Downloads Sync (weekly)"
-PLIST_LABEL="com.sprinkels.downloads-sync"
-PLIST_SRC="$DOTFILES_DIR/scripts/$PLIST_LABEL.plist"
-SYNC_SCRIPT="$DOTFILES_DIR/scripts/downloads-sync.sh"
-PLIST_DEST="$HOME/Library/LaunchAgents/$PLIST_LABEL.plist"
-SYNC_LOG="$HOME/Library/Logs/downloads-sync.log"
-
-if [ -f "$PLIST_SRC" ] && [ -f "$SYNC_SCRIPT" ]; then
-    if [ "$DRY_RUN" != "1" ]; then
-        mkdir -p "$HOME/Library/LaunchAgents"
-        # Fill in paths in the plist
-        sed -e "s|DOWNLOADS_SYNC_SCRIPT_PATH|$SYNC_SCRIPT|g" \
-            -e "s|DOWNLOADS_SYNC_LOG_PATH|$SYNC_LOG|g" \
-            "$PLIST_SRC" > "$PLIST_DEST"
-        # Unload if already loaded, then load
-        launchctl unload "$PLIST_DEST" 2>/dev/null || true
-        launchctl load "$PLIST_DEST"
-        info "Downloads sync installed: runs every Friday at noon."
-        info "Log: $SYNC_LOG"
-        info "Run manually: bash $SYNC_SCRIPT"
-    else
-        log_action "Would install launchd plist for weekly downloads sync"
-    fi
-else
-    warn "Downloads sync script or plist not found. Skipping."
-fi
-
 section "Setup Complete!"
-echo "🎉 Your Full Stack Web Development environment has been set up! 🎉"
+echo "🎉 Your headless Mac is set up! 🎉"
 echo ""
-echo "Internal: Homebrew + Docker unchanged. Developer and caches live on $EXTERNAL_ROOT"
-echo "Config:   $WORKFLOW_ENV (edit and re-run to change CODE_DIR_NAME)"
 echo "Dotfiles: copied to ~/dotfiles for backup"
-echo "Oh My Posh: ~/.config/ohmyposh/sprinks.omp.json"
-echo "VS Code: settings from config-files/vscode/settings.json, extensions from config-files/vscode/extensions.json"
+echo "Prompt:   ~/.config/ohmyposh/sprinks.omp.json"
+echo "Terminal: ~/.config/ghostty/config (font and colors, read by cmux)"
+echo "Apps and tools: Brewfile (brew bundle --file=$DOTFILES_DIR/Brewfile)"
+echo "Extended drive: tool caches (DevCache), when it's plugged in"
 echo ""
-echo "Optional: SET_MACOS_DEFAULTS=1 (default browser/dock)"
-echo "Downloads sync: runs every Friday (launchd), syncs ~/Downloads to $EXTERNAL_ROOT/Downloads and organizes by type"
 echo "DRY_RUN=1 to preview changes without applying."
 echo ""
-echo "Run 'source ~/.zshrc' (or restart terminal) to apply cache paths and aliases."
+echo "Run 'source ~/.zshrc' (or restart terminal) to apply aliases and the prompt."
 echo "Happy coding! 💻"
