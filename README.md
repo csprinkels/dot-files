@@ -25,7 +25,8 @@ Nothing is installed or moved. The script prints every action it *would* take.
 - **Everything in the [`Brewfile`](Brewfile)** via `brew bundle`:
   - **Terminal**: cmux, Nerd Fonts (JetBrains Mono, Meslo, Fira Code), oh-my-posh
   - **Shell tools**: fzf, ripgrep, fd, bat, jq, htop, gh, gitui, lazygit
-  - **Dev**: git, yarn, pnpm, OrbStack (containers), GitHub Desktop
+  - **Dev**: git, yarn, pnpm, rustup, OrbStack (containers), GitHub Desktop
+- **Rust** stable toolchain via rustup (into `~/.rustup`; `cargo install` puts tools in `~/.cargo/bin`)
 - **NVM** + Node LTS + global npm packages (typescript, next, eslint, prettier, nodemon, ts-node, Claude Code)
 - **Oh My Zsh** + zsh-autosuggestions + zsh-syntax-highlighting, then the custom `.zshrc`
 

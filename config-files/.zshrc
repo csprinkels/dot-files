@@ -15,6 +15,7 @@ HISTFILE=~/.zsh_history
 
 # === PATH ===
 export PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+export PATH="/opt/homebrew/opt/rustup/bin:$HOME/.cargo/bin:$PATH"  # Rust: rustup is keg-only, cargo installs land in ~/.cargo/bin
 
 # === Terminal ===
 export TERM="xterm-256color"

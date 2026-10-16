@@ -184,6 +184,17 @@ else
     warn "Some Brewfile entries failed. Run: brew bundle --file=$DOTFILES_DIR/Brewfile"
 fi
 
+# Rust: rustup comes from the Brewfile; this installs the stable toolchain into ~/.rustup.
+section "Setting up Rust"
+RUSTUP="$(brew --prefix)/opt/rustup/bin/rustup"
+if [ "$DRY_RUN" = "1" ]; then
+    log_action "Would install the stable Rust toolchain with rustup"
+elif [ -x "$RUSTUP" ]; then
+    "$RUSTUP" default stable && info "Rust stable installed!" || warn "rustup couldn't install stable. Run: rustup default stable"
+else
+    warn "rustup not found (did the Brewfile step fail?). Skipping Rust."
+fi
+
 # Configure Git if not configured and .gitconfig wasn't copied
 section "Setting up Git"
 if [ "$DRY_RUN" = "1" ]; then

@@ -25,5 +25,6 @@ brew "lazygit"
 brew "git"
 brew "yarn"
 brew "pnpm"
+brew "rustup"  # Rust; dev-setup.sh installs the stable toolchain
 cask "orbstack"  # containers; Docker Desktop fights it over the `docker` command
 cask "github"    # GitHub Desktop
