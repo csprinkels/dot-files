@@ -174,6 +174,17 @@ else
     info "XCode Command Line Tools already installed."
 fi
 
+# cmux comes from a third-party tap, which Homebrew ignores until it's trusted.
+# Trust only the cmux cask, not everything the tap might add later.
+section "Trusting the cmux tap"
+if [ "$DRY_RUN" = "1" ]; then
+    log_action "Would tap manaflow-ai/cmux and trust its cmux cask"
+elif brew tap manaflow-ai/cmux && brew trust --cask manaflow-ai/cmux/cmux; then
+    info "cmux cask trusted!"
+else
+    warn "Couldn't trust the cmux cask. Run: brew trust --cask manaflow-ai/cmux/cmux"
+fi
+
 # Everything else Homebrew installs is listed in the Brewfile.
 section "Installing from Brewfile"
 if [ "$DRY_RUN" = "1" ]; then
