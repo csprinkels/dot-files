@@ -1,0 +1,25 @@
+# What dev-setup.sh installs on the home-lab Mac (PROFILE=homelab), with `brew bundle`.
+# OrbStack and Tailscale are installed from their own sites there and update themselves.
+
+# Terminal: the prompt's icons need a Nerd Font when you use this Mac's own screen
+cask "font-jetbrains-mono-nerd-font"
+cask "font-meslo-lg-nerd-font"
+cask "font-fira-code-nerd-font"
+brew "oh-my-posh"
+
+# Shell tools
+brew "fzf"
+brew "ripgrep"
+brew "fd"
+brew "bat"
+brew "jq"
+brew "htop"
+brew "gh"
+brew "gitui"
+brew "lazygit"
+brew "git"
+
+# Apps
+cask "google-chrome"
+cask "chrome-remote-desktop-host"  # remote screen from work and the iPad, like the AI Mac
+cask "nordpass"

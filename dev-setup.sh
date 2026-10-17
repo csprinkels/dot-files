@@ -40,10 +40,19 @@ function log_action() {
 
 DOTFILES_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# Optional: PROFILE=homelab for the home-lab Mac (Brewfile.homelab; no cmux tap, Rust, or global npm packages)
+PROFILE="${PROFILE:-dev}"
+case "$PROFILE" in
+    dev) BREWFILE="$DOTFILES_DIR/Brewfile" ;;
+    homelab) BREWFILE="$DOTFILES_DIR/Brewfile.homelab" ;;
+    *) error "Unknown PROFILE '$PROFILE' (use dev or homelab)."; exit 1 ;;
+esac
+
 # Welcome message
 echo "🖥️  Headless Mac Setup 🖥️"
 echo "==================================================="
 echo "Terminal, shell, and dev tools for a Mac you mostly reach from the terminal."
+echo "Profile: $PROFILE ($(basename "$BREWFILE"))"
 [ "$DRY_RUN" = "1" ] && echo -e "${YELLOW}DRY RUN: no changes will be made.${NC}"
 echo ""
 
@@ -177,7 +186,9 @@ fi
 # cmux comes from a third-party tap, which Homebrew ignores until it's trusted.
 # Trust only the cmux cask, not everything the tap might add later.
 section "Trusting the cmux tap"
-if [ "$DRY_RUN" = "1" ]; then
+if [ "$PROFILE" != "dev" ]; then
+    info "Skipped: the $PROFILE profile doesn't install cmux."
+elif [ "$DRY_RUN" = "1" ]; then
     log_action "Would tap manaflow-ai/cmux and trust its cmux cask"
 elif brew tap manaflow-ai/cmux && brew trust --cask manaflow-ai/cmux/cmux; then
     info "cmux cask trusted!"
@@ -188,17 +199,19 @@ fi
 # Everything else Homebrew installs is listed in the Brewfile.
 section "Installing from Brewfile"
 if [ "$DRY_RUN" = "1" ]; then
-    brew bundle list --all --file="$DOTFILES_DIR/Brewfile" | while read -r entry; do log_action "Would install $entry"; done
-elif brew bundle --file="$DOTFILES_DIR/Brewfile"; then
+    brew bundle list --all --file="$BREWFILE" | while read -r entry; do log_action "Would install $entry"; done
+elif brew bundle --file="$BREWFILE"; then
     info "Brewfile installed successfully!"
 else
-    warn "Some Brewfile entries failed. Run: brew bundle --file=$DOTFILES_DIR/Brewfile"
+    warn "Some Brewfile entries failed. Run: brew bundle --file=$BREWFILE"
 fi
 
 # Rust: rustup comes from the Brewfile; this installs the stable toolchain into ~/.rustup.
 section "Setting up Rust"
 RUSTUP="$(brew --prefix)/opt/rustup/bin/rustup"
-if [ "$DRY_RUN" = "1" ]; then
+if [ "$PROFILE" != "dev" ]; then
+    info "Skipped: the $PROFILE profile doesn't install Rust."
+elif [ "$DRY_RUN" = "1" ]; then
     log_action "Would install the stable Rust toolchain with rustup"
 elif [ -x "$RUSTUP" ]; then
     "$RUSTUP" default stable && info "Rust stable installed!" || warn "rustup couldn't install stable. Run: rustup default stable"
@@ -228,7 +241,7 @@ section "Installing NVM"
 NVM_LATEST=$(curl -fsS -o /dev/null -w '%{redirect_url}' https://github.com/nvm-sh/nvm/releases/latest 2>/dev/null \
     | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' || echo "v0.40.1")
 if [ "$DRY_RUN" = "1" ]; then
-    log_action "Would install NVM ($NVM_LATEST) + Node LTS + global npm packages"
+    log_action "Would install NVM ($NVM_LATEST) + Node LTS"
 elif [ ! -d "$HOME/.nvm" ]; then
     echo "Installing NVM ($NVM_LATEST)..."
     curl -o- "https://raw.githubusercontent.com/nvm-sh/nvm/${NVM_LATEST}/install.sh" | bash
@@ -260,7 +273,9 @@ fi
 
 # Global npm packages (after NVM so they land on NVM Node)
 section "Setting up Node.js environment (global packages)"
-if [ "$DRY_RUN" = "1" ]; then
+if [ "$PROFILE" != "dev" ]; then
+    info "Skipped: the $PROFILE profile installs no global npm packages."
+elif [ "$DRY_RUN" = "1" ]; then
     log_action "Would install global npm packages: typescript next eslint prettier nodemon ts-node @anthropic-ai/claude-code"
 elif command -v npm &>/dev/null; then
     echo "Installing global npm packages..."
@@ -325,7 +340,7 @@ echo ""
 echo "Dotfiles: copied to ~/dotfiles for backup"
 echo "Prompt:   ~/.config/ohmyposh/sprinks.omp.json"
 echo "Terminal: ~/.config/ghostty/config (font and colors, read by cmux)"
-echo "Apps and tools: Brewfile (brew bundle --file=$DOTFILES_DIR/Brewfile)"
+echo "Apps and tools: $(basename "$BREWFILE") (brew bundle --file=$BREWFILE)"
 echo "Extended drive: tool caches (DevCache), when it's plugged in"
 echo ""
 echo "DRY_RUN=1 to preview changes without applying."

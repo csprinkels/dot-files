@@ -18,6 +18,14 @@ DRY_RUN=1 bash dev-setup.sh
 
 Nothing is installed or moved. The script prints every action it *would* take.
 
+### Home-lab Mac
+
+```bash
+PROFILE=homelab bash dev-setup.sh
+```
+
+Installs from [`Brewfile.homelab`](Brewfile.homelab) instead, and skips the cmux tap, Rust, and the global npm packages. The shell, prompt, and config files are the same.
+
 ## What `dev-setup.sh` does
 
 - **Config files**: `.gitconfig`, the Oh My Posh theme, and the terminal config (below), each backed up with a timestamp before it's replaced
